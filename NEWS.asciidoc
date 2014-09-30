@@ -17,6 +17,7 @@ Version x.y.x released on yyyy-mm-dd
 New Features
 ++++++++++++
 * pfmon can now run tasks on different intervals
+* added portal profile filter based on switch-port couple
 
 Enhancements
 ++++++++++++
