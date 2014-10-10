@@ -44,7 +44,8 @@ install: build
 
 	#copying example files with the extention
 	for i in `find * -name "*.example"`; do \
-	        cp $$i "$$(dirname $$i)/$$(basename $$i .example)"; \
+		$(INSTALL) $$i $(CURDIR)/debian/packetfence$(PREFIX)/$(NAME)/$$(dirname $$i)/$$(basename $$i .example); \
+	        #cp $$i "$$(dirname $$i)/$$(basename $$i .example)"; \
 	done
 
 	# Install all except debian and t directory
@@ -158,11 +159,11 @@ binary-arch: build install
 		-X$(NAME)sbin/pfarp_remote
 	chmod 2775 $(CURDIR)/debian/packetfence$(PREFIX)/$(NAME)/var/run
 	chmod 2775 $(CURDIR)/debian/packetfence$(PREFIX)/$(NAME)/var/dhcpd
-	chown dhcpd:dhcpd $(CURDIR)/debian/packetfence$(PREFIX)/$(NAME)/var/dhcpd/dhcpd.leases
+	#chown dhcpd:dhcpd $(CURDIR)/debian/packetfence$(PREFIX)/$(NAME)/var/dhcpd/dhcpd.leases
 	# Set setuid root on bin/pfcmd
-	chown pf:pf -R $(CURDIR)/debian/packetfence-pfcmd-suid$(PREFIX)/$(NAME)/
-	chown root:root $(CURDIR)/debian/packetfence-pfcmd-suid$(PREFIX)/$(NAME)/bin/pfcmd
-	chmod ug+s $(CURDIR)/debian/packetfence-pfcmd-suid$(PREFIX)/$(NAME)/bin/pfcmd
+	#chown pf:pf -R $(CURDIR)/debian/packetfence-pfcmd-suid$(PREFIX)/$(NAME)/
+	#chown root:root $(CURDIR)/debian/packetfence-pfcmd-suid$(PREFIX)/$(NAME)/bin/pfcmd
+	#chmod ug+s $(CURDIR)/debian/packetfence-pfcmd-suid$(PREFIX)/$(NAME)/bin/pfcmd
 #	dh_perl
 #	dh_makeshlibs
 	dh_installdeb
