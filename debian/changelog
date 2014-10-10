@@ -1,3 +1,9 @@
+packetfence (4.4.0ubuntu1) trusty; urgency=medium
+
+  * Packaged for Ubuntu
+
+ -- Christopher Hoskin <christopher.hoskin@gmail.com>  Fri, 10 Oct 2014 07:16:31 +0100
+
 packetfence (4.4.0) unstable; urgency=low
 
   * Version 4.4.0
