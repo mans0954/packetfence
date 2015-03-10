@@ -53,6 +53,7 @@ Please let us know if you are interested.
 This is not useful for MAC-Authentication or 802.1X-based access control techniques.
 
 =cut
+
 use strict;
 use warnings;
 
@@ -138,7 +139,7 @@ Inverse inc. <info@inverse.ca>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

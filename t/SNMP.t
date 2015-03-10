@@ -34,7 +34,6 @@ can_ok($SNMP, qw(
     _setVlanByOnlyModifyingPvid
     setVlanByName
     setMacDetectionVlan
-    _identifyConnectionType
   ));
 
 # SNMP object tests
@@ -146,7 +145,7 @@ Inverse inc. <info@inverse.ca>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

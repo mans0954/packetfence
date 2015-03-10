@@ -18,6 +18,8 @@ use Cache::FileCache;
 use List::Util qw(first);
 use POSIX;
 use Locale::gettext qw(bindtextdomain textdomain bind_textdomain_codeset);
+use List::Util 'first';
+use List::MoreUtils qw(uniq);
 
 BEGIN { extends 'captiveportal::Base::Controller'; }
 
@@ -81,16 +83,7 @@ sub setupCommonStash : Private {
     my ( $self, $c ) = @_;
     my $logger = get_logger;
     my $portalSession   = $c->portalSession;
-    my $destination_url = $c->request->param('destination_url');
-    if (isenabled($c->profile->forceRedirectURL)){
-        $destination_url = $c->profile->getRedirectURL;
-    }
-    elsif (defined $destination_url && !($destination_url eq "")) { 
-        $destination_url = decode_entities( uri_unescape($destination_url) );
-    } 
-    else {
-        $destination_url = $c->profile->getRedirectURL;
-    }
+    my $destination_url = $portalSession->destinationUrl;
 
     my @list_help_info;
     push @list_help_info,
@@ -101,7 +94,7 @@ sub setupCommonStash : Private {
       if ( defined( $portalSession->clientMac ) );
     $c->stash(
         pf::web::constants::to_hash(),
-        destination_url => $destination_url,
+        destination_url => encode_entities($destination_url),
         logo            => $c->profile->getLogo,
         list_help_info  => \@list_help_info,
     );
@@ -162,7 +155,6 @@ sub getLanguages :Private {
     unless (scalar @authorized_locales > 0) {
         @authorized_locales = @WEB::LOCALES;
     }
-
     $logger->debug("Authorized locale(s) are " . join(', ', @authorized_locales));
 
     # 1. Check if a language is specified in the URL
@@ -197,18 +189,34 @@ sub getLanguages :Private {
             $logger->debug("locale from the browser is $lang");
         }
         else {
-            $logger->trace("locale from the browser $browser_language is not supported");
+            $logger->debug("locale from the browser $browser_language is not supported");
+        }
+    }
+
+    # 4. Check the closest language that match the browser
+    # Browser = fr_FR and portal is en_US and fr_CA then fr_CA will be used
+    foreach my $browser_language (@$browser_languages) {
+        $browser_language =~ s/^(\w{2})(_\w{2})?/lc($1) . uc($2)/e;
+        my $language = $1;
+        if (grep(/^$language$/, @authorized_locales)) {
+            $lang = $browser_language;
+            my $match = first { /$language(.*)/ } @authorized_locales;
+            push(@languages, $match) unless (grep/^$language$/, @languages);
+            $logger->debug("Language locale from the browser is $lang");
+        }
+        else {
+            $logger->debug("Language locale from the browser $browser_language is not supported");
         }
     }
 
     if (scalar @languages > 0) {
-        $logger->trace("prefered user languages are " . join(", ", @languages));
+        $logger->debug("prefered user languages are " . join(", ", @languages));
     }
     else {
         push(@languages, $authorized_locales[0]);
     }
-
-    return \@languages;
+    my @returned_languages = uniq(@languages);
+    return \@returned_languages;
 }
 
 =head2 getRequestLanguages
@@ -261,7 +269,7 @@ Inverse inc. <info@inverse.ca>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2014 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

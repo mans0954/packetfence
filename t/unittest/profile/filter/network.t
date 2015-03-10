@@ -13,6 +13,10 @@ value
 use strict;
 use warnings;
 use lib qw(/usr/local/pf/lib);
+BEGIN {
+    use lib qw(/usr/local/pf/t);
+    use PfFilePaths;
+}
 use NetAddr::IP;
 
 use Test::More tests => 9;                      # last test to print
@@ -42,7 +46,7 @@ Inverse inc. <info@inverse.ca>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2014 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

@@ -6,7 +6,7 @@ pf::Switch::Extreme - Object oriented module to parse SNMP traps and manage Extr
 
 =head1 STATUS
 
-=head2 Supports 
+=head1 SUPPORTS 
 
 =over
 
@@ -1520,7 +1520,7 @@ Inverse inc. <info@inverse.ca>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

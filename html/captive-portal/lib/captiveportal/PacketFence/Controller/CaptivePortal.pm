@@ -18,6 +18,8 @@ use Cache::FileCache;
 use pf::activation;
 use pf::os;
 use List::MoreUtils qw(any);
+use List::Util qw(first);
+use pf::factory::provisioner;
 
 BEGIN { extends 'captiveportal::Base::Controller'; }
 
@@ -53,7 +55,6 @@ sub index : Path : Args(0) {
     my ( $self, $c ) = @_;
     $c->forward('validateMac');
     $c->forward('nodeRecordUserAgent');
-    $c->forward('checkForProvisioningSupport');
     $c->forward('checkForViolation');
     $c->forward('checkIfNeedsToRegister');
     $c->forward('checkIfPending');
@@ -102,7 +103,7 @@ sub nodeRecordUserAgent : Private {
       if ( defined($cached_useragent) && $user_agent eq $cached_useragent );
 
     # Caching and updating node's info
-    $logger->trace("[$mac] adding user-agent to cache");
+    $logger->debug("[$mac] adding user-agent to cache");
     $USERAGENT_CACHE->set( $mac, $user_agent, "5 minutes" );
 
     # Recording useragent
@@ -113,68 +114,6 @@ sub nodeRecordUserAgent : Private {
     # updates the node_useragent information and fires relevant violations triggers
     return pf::useragent::process_useragent( $mac, $user_agent );
 }
-
-=head2 checkForProvisioningSupport
-
-checks if provisioning is supported support
-
-=cut
-
-sub checkForProvisioningSupport : Private {
-    my ( $self, $c ) = @_;
-    if (isenabled($Config{'provisioning'}{'autoconfig'})) {
-        return ( $c->forward('supportsMobileConfigProvisioning') ||
-                 $c->forward('supportsAndroidConfigProvisioning') );
-    }
-    return 0;
-}
-
-=head2 supportsMobileConfigProvisioning
-
-TODO: documention
-
-=cut
-
-sub supportsMobileConfigProvisioning : Private {
-    my ( $self, $c ) = @_;
-    if($self->matchAnyOses($c,'Apple iPod, iPhone or iPad')) {
-        $c->user_cache->set("mac:" . $c->portalSession->clientMac . ":do_not_deauth" ,1);
-        return 1;
-    }
-    return 0;
-}
-
-=head2 supportsAndroidConfigProvisioning
-
-TODO: documention
-
-=cut
-
-sub supportsAndroidConfigProvisioning : Private {
-    my ( $self, $c ) = @_;
-    if($self->matchAnyOses($c,'Android')) {
-        $c->user_cache->set("mac:" . $c->portalSession->clientMac . ":do_not_deauth" ,1);
-        return 1;
-    }
-    return 0;
-}
-
-sub matchAnyOses {
-    my ($self, $c, @toMatch) = @_;
-    my $node_attributes = node_attributes( $c->portalSession->clientMac );
-    my @fingerprint =
-      dhcp_fingerprint_view( $node_attributes->{'dhcp_fingerprint'} );
-    my $os = $fingerprint[0]->{'os'};
-    return $FALSE unless defined $os;
-    return $FALSE unless any { $os =~ $_ } @toMatch;
-    my $config_category = $Config{'provisioning'}{'category'};
-    my $node_cat = $node_attributes->{'category'};
-
-    # validating that the node is under the proper category for mobile config provioning
-    return $TRUE if ( $config_category eq 'any' || (defined($node_cat) && $node_cat eq $config_category));
-    return $FALSE;
-}
-
 
 =head2 checkForViolation
 
@@ -196,7 +135,7 @@ sub checkForViolation : Private {
         # There is a violation, redirect the user
         # FIXME: there is not enough validation below
         my $vid      = $violation->{'vid'};
-        my $SCAN_VID = 12003;
+        my $SCAN_VID = 1200001;
 
         # detect if a system scan is in progress, if so redirect to scan in progress page
         if (   $vid == $SCAN_VID
@@ -204,7 +143,7 @@ sub checkForViolation : Private {
             =~ /^Scan in progress, started at: (.*)$/ ) {
             $logger->info(
                 "[$mac] captive portal redirect to the scan in progress page");
-            $c->detach( 'scan_status', [$1] );
+            $c->detach( 'Remediation', 'scan_status', [$1] );
         }
         my $class    = class_view($vid);
         my $template = $class->{'template'};
@@ -271,22 +210,21 @@ sub checkIfNeedsToRegister : Private {
     $c->stash(unreg => $unreg,);
     if ($unreg && isenabled($Config{'trapping'}{'registration'})) {
 
-        $logger->info("[$mac] redirected to ".$profile->name);
         # Redirect to the billing engine if enabled
         if (isenabled($portalSession->profile->getBillingEngine)) {
-            $logger->info("[$mac] redirected to billing page");
+            $logger->info("[$mac] redirected to billing page on ".$profile->name." portal");
             $c->detach('Pay' => 'index');
         } elsif ( $profile->nbregpages > 0 ) {
             $logger->info(
-                "[$mac] redirected to multi-page registration process");
+                "[$mac] redirected to multi-page registration process on ".$profile->name." portal");
             $c->detach('Authenticate', 'next_page');
         } elsif ($portalSession->profile->guestRegistrationOnly) {
 
             # Redirect to the guests self registration page if configured to do so
-            $logger->info("[$mac] redirected to guests self registration page");
+            $logger->info("[$mac] redirected to guests self registration page on ".$profile->name." portal");
             $c->detach('Signup' => 'index');
         } else {
-            $logger->info("[$mac] redirected to authentication page");
+            $logger->info("[$mac] redirected to authentication page on ".$profile->name." portal");
             $c->detach('Authenticate', 'index');
         }
     }
@@ -306,7 +244,21 @@ sub checkIfPending : Private {
     my $mac           = $portalSession->clientMac;
     my $node_info     = node_view($mac);
     my $request       = $c->request;
+    my $logger        = $c->log;
     if ( $node_info && $node_info->{'status'} eq $pf::node::STATUS_PENDING ) {
+        if (defined(my $provisioner = $profile->findProvisioner($mac))) {
+            unless ($provisioner->authorize($mac)) {
+                $c->stash(
+                    template => $provisioner->template,
+                    provisioner => $provisioner,
+                );
+                $c->detach();
+            } elsif (!pf::activation::activation_has_entry($mac,'sms') ) {
+                node_modify($mac,status => $pf::node::STATUS_REGISTERED);
+                reevaluate_access( $mac, 'manage_register' ) unless $provisioner->skipDeAuth;
+                $c->detach( Release => 'index' );
+            }
+        }
         if ( pf::activation::activation_has_entry($mac,'sms') ) {
             node_deregister($mac);
             $c->stash(
@@ -320,7 +272,7 @@ sub checkIfPending : Private {
                   . $Config{'general'}{'hostname'} . "."
                   . $Config{'general'}{'domain'}
                   . '/captive-portal?destination_url='
-                  . uri_escape( $portalSession->_build_destinationUrl ) );
+                  . uri_escape( $portalSession->destinationUrl ) );
         } else {
             $c->stash(
                 template => 'pending.html',
@@ -331,6 +283,7 @@ sub checkIfPending : Private {
                 redirect_url => $Config{'trapping'}{'redirecturl'},
                 initial_delay =>
                   $CAPTIVE_PORTAL{'NET_DETECT_PENDING_INITIAL_DELAY'},
+                image_path => $Config{'captive_portal'}{'image_path'},
             );
 
             # override destination_url if we enabled the always_use_redirecturl option
@@ -388,9 +341,9 @@ sub unknownState : Private {
             $logger->info("(" . $switch->{_id} . ") supports web form release. Will use this method to authenticate [$mac]");
             $c->stash(
                 template => 'webFormRelease.html',
-                content => $switch->getAcceptForm($mac, 
-                                $c->stash->{destination_url}, 
-                                new pf::Portal::Session()->session, 
+                content => $switch->getAcceptForm($mac,
+                                $c->stash->{destination_url},
+                                new pf::Portal::Session()->session,
                                 ),
             );
             $c->detach;
@@ -408,6 +361,7 @@ sub endPortalSession : Private {
     my ( $self, $c ) = @_;
     my $logger        = get_logger;
     my $portalSession = $c->portalSession;
+    my $profile       = $c->profile;
 
     # First blast at handling portalSession object
     my $mac             = $portalSession->clientMac();
@@ -421,8 +375,13 @@ sub endPortalSession : Private {
         $logger->info("[$mac] more violations yet to come");
     }
 
-    # handle mobile provisioning if relevant
-    $c->forward('provisioning') if ( $c->forward('checkForProvisioningSupport') );
+    # show provisioner template if we're authorizing and skiping deauth
+    my $provisioner = $profile->findProvisioner($mac);
+    if(defined($provisioner) && $provisioner->authorize($mac) && $provisioner->skipDeAuth) {
+        # handle autoconfig provisioning
+        $c->stash( template => $provisioner->template );
+        $c->detach();
+    }
 
     # we drop HTTPS so we can perform our Internet detection and avoid all sort of certificate errors
     if ( $c->request->secure ) {
@@ -434,29 +393,6 @@ sub endPortalSession : Private {
     }
 
     $c->forward( 'Release' => 'index' );
-}
-
-=head2 provisioning
-
-=cut
-
-sub provisioning : Private {
-    my ( $self, $c ) = @_;
-    if($c->forward('supportsMobileConfigProvisioning') ) {
-        $c->detach('release_with_xmlconfig');
-    } elsif( $c->forward('supportsAndroidConfigProvisioning') ) {
-        $c->detach('release_with_android');
-    }
-}
-
-sub release_with_xmlconfig : Private {
-    my ( $self, $c ) = @_;
-    $c->stash( template => 'release_with_xmlconfig.html');
-}
-
-sub release_with_android : Private {
-    my ( $self, $c ) = @_;
-    $c->stash( template => 'release_with_android.html');
 }
 
 sub getSubTemplate {
@@ -500,7 +436,8 @@ sub webNodeRegister : Private {
     }
     node_register( $mac, $pid, %info );
 
-    unless ( $c->user_cache->get("mac:$mac:do_not_deauth") ) {
+    my $provisioner = $c->profile->findProvisioner($mac);
+    unless ( (defined($provisioner) && $provisioner->skipDeAuth) || $c->user_cache->get("do_not_deauth") ) {
         my $node = node_view($mac);
         my $switch;
         if( pf::SwitchFactory->hasId($node->{last_switch}) ){
@@ -511,9 +448,9 @@ sub webNodeRegister : Private {
             $logger->info("Switch supports web form release.");
             $c->stash(
                 template => 'webFormRelease.html',
-                content => $switch->getAcceptForm($mac, 
-                                $c->stash->{destination_url}, 
-                                new pf::Portal::Session()->session, 
+                content => $switch->getAcceptForm($mac,
+                                $c->stash->{destination_url},
+                                new pf::Portal::Session()->session,
                                 ),
             );
             $c->detach;
@@ -561,7 +498,7 @@ Inverse inc. <info@inverse.ca>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2014 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

@@ -41,6 +41,7 @@ use pf::node qw(nodes_registered_not_violators);
 use pf::util;
 use pf::violation qw(violation_view_open_uniq violation_count);
 use pf::authentication;
+use pf::ConfigStore::Provisioning;
 
 # This is the content that needs to match in the iptable rules for the service
 # to be considered as running
@@ -98,6 +99,7 @@ sub iptables_generate {
     # global substitution variables
     $tags{'web_admin_port'} = $Config{'ports'}{'admin'};
     $tags{'webservices_port'} = $Config{'ports'}{'soap'};
+    $tags{'aaa_port'} = $Config{'ports'}{'aaa'};
     # FILTER
     # per interface-type pointers to pre-defined chains
     $tags{'filter_if_src_to_chain'} .= $self->generate_filter_if_src_to_chain();
@@ -131,10 +133,13 @@ sub iptables_generate {
 
     # per-feature firewall rules
     # self-registered guest by email or sponsored or gaming registration
+    # pre-registration guest
     my $device_registration_enabled = isenabled($Config{'registration'}{'device_registration'});
+    my $pre_registration_enabled    = isenabled($Config{'guests_self_registration'}{'preregistration'});
     my $email_enabled = $guest_self_registration{$SELFREG_MODE_EMAIL};
     my $sponsor_enabled = $guest_self_registration{$SELFREG_MODE_SPONSOR};
-    if ( $email_enabled || $sponsor_enabled || $device_registration_enabled ) {
+    my $chained_enabled = $guest_self_registration{$SELFREG_MODE_CHAINED};
+    if ( $email_enabled || $sponsor_enabled || $chained_enabled || $device_registration_enabled || $pre_registration_enabled ) {
         $tags{'input_mgmt_guest_rules'} =
             "-A $FW_FILTER_INPUT_MGMT --protocol tcp --match tcp --dport 443 --jump ACCEPT"
         ;
@@ -338,6 +343,9 @@ sub generate_passthrough_rules {
         $$forward_rules_ref .= "-A $FW_FILTER_FORWARD_INT_VLAN -m set --match-set pfsession_passthrough dst,dst --jump ACCEPT\n";
         $$forward_rules_ref .= "-A $FW_FILTER_FORWARD_INT_VLAN -m set --match-set pfsession_passthrough src,src --jump ACCEPT\n";
     }
+
+    # add passthroughs required by the provisionings
+    generate_provisioning_passthroughs();
 
     $logger->info("Adding NAT Masquerade statement.");
     my $mgmt_int = $management_network->tag("int");
@@ -629,6 +637,39 @@ sub generate_interception_rules {
     }
 }
 
+sub generate_provisioning_passthroughs {
+    my $logger = Log::Log4perl::get_logger('pf::iptables');
+    foreach my $config (pf::ConfigStore::Provisioning->new->search(type => 'sepm')) {
+        $logger->info("Adding passthrough for Symantec Endpoint Manager");
+        my $cmd = "LANG=C sudo ipset --add pfsession_passthrough $config->{'host'},8014 2>&1";
+        my @lines  = pf_run($cmd); 
+    }
+
+    foreach my $config (pf::ConfigStore::Provisioning->new->search(type => 'mobileiron')) {
+        $logger->info("Adding passthrough for MobileIron");
+        # Allow the host for the onboarding of devices
+        my $cmd = "LANG=C sudo ipset --add pfsession_passthrough $config->{boarding_host},$config->{boarding_port} 2>&1";
+        my @lines  = pf_run($cmd); 
+        # Allow http communication with the MobileIron server
+        $cmd = "LANG=C sudo ipset --add pfsession_passthrough $config->{boarding_host},80 2>&1";
+        @lines  = pf_run($cmd); 
+        # Allow https communication with the MobileIron server
+        $cmd = "LANG=C sudo ipset --add pfsession_passthrough $config->{boarding_host},443 2>&1";
+        @lines  = pf_run($cmd); 
+    }
+
+    foreach my $config (pf::ConfigStore::Provisioning->new->search(type => 'opswat')) {
+        $logger->info("Adding passthrough for OPSWAT");
+        # Allow http communication with the MobileIron server
+        my $cmd = "LANG=C sudo ipset --add pfsession_passthrough $config->{host},80 2>&1";
+        my @lines  = pf_run($cmd); 
+        # Allow https communication with the MobileIron server
+        $cmd = "LANG=C sudo ipset --add pfsession_passthrough $config->{host},443 2>&1";
+        @lines  = pf_run($cmd); 
+    }
+
+
+}
 
 =back
 
@@ -640,7 +681,7 @@ Minor parts of this file may have been contributed. See CREDITS.
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 Copyright (C) 2005 Kevin Amorin
 
@@ -665,4 +706,4 @@ USA.
 
 =cut
 
-
+1;

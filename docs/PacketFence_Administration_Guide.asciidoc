@@ -1,5 +1,5 @@
-PacketFence Administration Guide
-================================
+Administration Guide
+====================
 :encoding: UTF-8
 :lang: en
 :doctype: book
@@ -354,7 +354,7 @@ Important parameters to configure regarding the captive portal are the following
 
 * Redirect URL under *Configuration -> Portal Profile -> Portal Name*
 
-For some browsers, is it preferable to redirect the user to a specific URL instead of the URL the user originally intended to visit. For these browsers, the URL defined in `redirecturl` will be the one where the user will be redirected. Affected browsers are Firefox 3 and later.
+For some browsers, it is preferable to redirect the user to a specific URL instead of the URL the user originally intended to visit. For these browsers, the URL defined in `redirecturl` will be the one where the user will be redirected. Affected browsers are Firefox 3 and later.
 
 * IP under *Configuration -> Captive portal*
 
@@ -396,9 +396,9 @@ Moreover, PacketFence can also authenticate users defined in its own internal SQ
 
 Each authentication sources you define will have a set of rules, conditions and actions.
 
-Multiple authentication sources can be defined, and will be tested in the order specified (note that they can be reordered from the GUI by dragging it around). Each source can have multiple rules, which will also be tested in the order specified. Rules can also be reordered, just like sources. Finally, conditions can be defined for a rule to match certain criterias. If the criterias match (one ore more), action are then applied and rules testing stop, across all sources as this is a "first match wins" operation.
+Multiple authentication sources can be defined, and will be tested in the order specified (note that they can be reordered from the GUI by dragging it around). Each source can have multiple rules, which will also be tested in the order specified. Rules can also be reordered, just like sources. Finally, conditions can be defined for a rule to match certain criterias. If the criterias match (one or more), action are then applied and rules testing stop, across all sources as this is a "first match wins" operation.
 
-When no condition is defined, the rule will be considered as a fallback. When a fallback is defined, all actions will be applied fory any users that match in the authentication source.
+When no condition is defined, the rule will be considered as a fallback. When a fallback is defined, all actions will be applied for any users that match in the authentication source.
 
 Once a source is defined, it can be used from *Configuration -> Portal Profiles*. Each portal profile has a list of authentication sources to use.
 
@@ -871,16 +871,6 @@ and of course restart radiusd:
 Option 2: Authentication against Active Directory (AD)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Replace `/usr/local/pf/raddb/modules/mschap` with the following configuration: 
-
-  mschap {
-          use_mppe = yes
-          require_encryption = yes
-          require_strong = yes
-          with_ntdomain_hack = yes
-          ntlm_auth = "/usr/bin/ntlm_auth --request-nt-key --username=%{%{Stripped-User-Name}:-%{mschap:User-Name:-None}} --challenge=%{mschap:Challenge:-00} --nt-response=%{mschap:NT-Response:-00}"
-  }
-
 Samba / Kerberos / Winbind
 ++++++++++++++++++++++++++
 
@@ -1059,9 +1049,9 @@ Option 5: EAP Guest Authentication on email, sponsor and sms registration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The goal here is to be able to use the credential PacketFence created on guest access and use this one on a secure connection.
-First create a guest SSID with the guest access you want to use (Email, Sponsor or SMS) and check Add user on email registration amd/or
+First create a guest SSID with the guest access you want to use (Email, Sponsor or SMS) and check Add user on email registration and/or
 Add user on sponsor registration in Configuration -> Self Registration section.
-At the end of the guest registration, PacketFence will send a an email with the credentials for Email and Sponsor. For SMS use your
+At the end of the guest registration, PacketFence will send an email with the credentials for Email and Sponsor. For SMS use your
 phone number and the PIN code.
 
 Note that this option doesn't currently work with the 'Reuse dot1x credentials' option of the captive portal.
@@ -1189,14 +1179,14 @@ Log files
 
 Here are the most important PacketFence log files:
 
-/usr/local/pf/logs/packetfence.log:: PacketFence Core Log
-/usr/local/pf/logs/portal_access_log:: Apache – Captive Portal Access Log
-/usr/local/pf/logs/portal_error_log:: Apache – Captive Portal Error Log
-/usr/local/pf/logs/admin_access_log:: Apache – Web Admin/Services Access Log
-/usr/local/pf/logs/admin_error_log:: Apache – Web Admin/Services Error Log
-/usr/local/pf/logs/admin_debug_log:: Apache – Web Admin Debug Log
-/usr/local/pf/logs/webservices_access_log:: Apache – Webservices Access Log
-/usr/local/pf/logs/webservices_error_log:: Apache – Webservices Error Log
+[options="compact"]
+* `/usr/local/pf/logs/packetfence.log` — PacketFence Core Log
+* `/usr/local/pf/logs/httpd.portal.access` — Apache – Captive Portal Access Log
+* `/usr/local/pf/logs/httpd.portal.error` — Apache – Captive Portal Error Log
+* `/usr/local/pf/logs/httpd.admin.access` — Apache – Web Admin/Services Access Log
+* `/usr/local/pf/logs/httpd.admin.error` — Apache – Web Admin/Services Error Log
+* `/usr/local/pf/logs/httpd.webservices.access` — Apache – Webservices Access Log
+* `/usr/local/pf/logs/httpd.webservices.error` — Apache – Webservices Error Log
 
 There are other log files in `/usr/local/pf/logs/` that could be relevant depending on what issue you are experiencing. Make sure you take a look at them.
 
@@ -1596,7 +1586,7 @@ PacketFence policy violations are controlled using the `/usr/local/pf/conf/viola
 `isolationVlan`::: Isolation VLAN as specified in `switches.conf`. This is the recommended value for most violation types.
 `registrationVlan`::: Registration VLAN as specified in `switches.conf`.
 `normalVlan`::: Normal VLAN as specified in `switches.conf`. Note: It is preferable not to trap than to trap and put in normal VLAN. Make sure you understand what you are doing.
-`whitelisted_categories`:: Nodes in a category listed in `whitelisted_categories` won't be affected by a violation of this type. Format is a comma separated list of category names.
+`whitelisted_categories`::: Nodes in a category listed in `whitelisted_categories` won't be affected by a violation of this type. Format is a comma separated list of category names.
 
 Also included in `violations.conf` is the defaults section. The defaults section will set a default value for every violation in the configuration. If a configuration value is not specified in the specific ID, the default will be used:
 
@@ -1607,6 +1597,7 @@ Also included in `violations.conf` is the defaults section. The defaults section
   auto_enable=Y
   enable=N
   grace=120m
+  delay_by=0
   window=0
   vclose=
   target_category=
@@ -1621,6 +1612,8 @@ Number of times a host will be able to try and self remediate before they are lo
 Specifies if a host can self remediate the violation (enable network button) or if they can not and must call the help desk.
 `grace`::
 Amount of time before the violation can reoccur. This is useful to allow hosts time (in the example 2 minutes) to download tools to fix their issue, or shutoff their peer-to-peer application.
+`delay_by`::
+Amount of time before the violation action will run.
 `window`::
 Amount of time before a violation will be closed automatically.  Instead of allowing people to reactivate the network, you may want to open a violation for a defined amount of time instead.  You can use the allowed time modifiers or the dynamic keyword.  Note that the dynamic keyword only works for accounting violations.  Dynamic will open the violation according to the time you set in the
 accounting violation (ie. You have an accounting violation for 10GB/month.  If you bust the bandwidth after 3 days, the violation will open and the release date will be set for the last day of the current month.)
@@ -1666,6 +1659,8 @@ Nessus
 Please visit http://www.nessus.org/download/ to download and install the Nessus package for your operating system. You will also need to register for the HomeFeed (or the ProfessionalFeed) in order to get the plugins.
 
 After you installed Nessus, follow the Nessus documentation for the configuration of the Nessus Server, and to create a user for PacketFence.
+
+NOTE: You may run into some issue while using Nessus with the Net::Nessus::XMLRPC module (which is the default behavior in PacketFence). Please refer to the http://packetfence.org/bugs/view.php?id=1841[bug tracking system] for more information.
 
 OpenVAS
 +++++++
@@ -2065,30 +2060,25 @@ Next, click on *Add a condition*, and select *Anti-virus*, *is*, and *disabled* 
 
 The last step is to create a new remediation template called `noantivirus.php` on the filesystem in the `html/captive-portal/violations` folder. Edit it to include the text you want to display to the users.
 
-Apple and Android Wireless Profile Provisioning
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Apple and Android Wireless Provisioning
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Apple devices such as iPhones, iPads, iPods and Mac OS X (10.7+) support wireless profile importation using a special XML file format (mobileconfig). Android is also able to support this feature by importing the wireless profile with the Android PacketFence Agent. In fact, installing such file on your Apple device will automatically configure the wireless settings for a given SSID. This feature is often used when the SSID is hidden, and you want to ease the configuration steps on the mobile device (because it is often painful to configure manually). In PacketFence, we are going further, we generate the profile according to the administrator's preference and we pre-populate the file with the user's credentials (without the password). The user simply needs to install its generated file and he will be able to use the new SSID.
 
 Configure the feature
 ^^^^^^^^^^^^^^^^^^^^^
 
-In order to enable this feature, you simply need to add 3 options to your `pf.conf` configuration file.
+First of all, you need to configure the SSID that your devices will use after they go though the authentication process.
 
-provisioning.autoconfig:: Enable or disable the feature
-provisioning.ssid:: This is the SSID you want the user to connect to upon registration 
-provisioning.category:: Activate this feature to a specific category or any.
+In order to do that, in the administration interface, go in 'Configuration/Provisioners'. Then select the 'android' provisioner. Enter the SSID and save.
 
-Here is an example: We have an hidden WPA2-Enterprise SSID named HiddenSecure, and we want to provision this wireless profile to everybody registering with an iPhone, iPad, or iPod. The configuration in `pf.conf` would look like:
+Now do the same thing for the ios provisioner.
 
-  [provisioning]
-  autoconfig=enabled
-  ssid=HiddenSecure
-  category=any
+After, you simply need to add the 'android' and 'ios' provisioners to your 'Portal Profile' configuration as shown in this screenshot.
 
-Alternatively, you can configure these parameters from the PacketFence Web administrative GUI, in the *Configuration -> Provisioning* section.
+image::docs/images/add-mobileconfig-provisioners.png[scaledwidth="100%",alt="Portal profile, mobile config provisioners"]
 
-For Android, you must allow passthrough in your configuration like this:
+For Android, you must allow passthroughs in your configuration like this:
 
   [trapping]
   passthrough=enabled
@@ -2140,6 +2130,8 @@ Billing engine parameters are specified in `conf/pf.conf` or from *Configuration
 It is also possible to configure multiple network access with different prices.
 For example, you may want to provide basic Internet access with a decent speed at a specific price and another package with high speed connection at another price.
 
+CAUTION: The use of different billing tiers requires different roles in PacketFence. Make sure to create these roles first otherwise you will run into problems.
+
 To do so, some customizations is needed to the billing module. You'll need to redefined the `getAvailableTiers` method in the `lib/pf/billing/custom.pm` file. An example is already in place in the file.
 
 To assign a role by tiers (example: slow, medium and fast), edit the file `lib/pf/billing/custom.pm`
@@ -2171,8 +2163,6 @@ To assign a role by tiers (example: slow, medium and fast), edit the file `lib/p
 *description will* appear on the billing.html.
 
 *destination_url* is the url that the device will be redirected after a successful authentication.
-
-CAUTION: The use of different billing tiers requires different roles in PacketFence. Make sure to create these roles first otherwise you will run into problems.
 
 Portal Profiles
 ~~~~~~~~~~~~~~~
@@ -2479,10 +2469,10 @@ realm ntdomain {
 }
 ----
 
-Vlan Filter Definition
+VLAN Filter Definition
 ~~~~~~~~~~~~~~~~~~~~~~
 
-We added the ability to specify filters directly in the portion of code that re-evaluates the VLAN. 
+We added the ability to specify filters directly in the portion of code that re-evaluates the VLAN or do a call to the API. 
 
 These rules are available in different scopes:
 
@@ -2491,6 +2481,7 @@ These rules are available in different scopes:
   NormalVlan
   InlineVlan
   AutoRegister
+  NodeInfoForAutoReg
 
 And can be defined using different criteria like:
 
@@ -2528,15 +2519,32 @@ from Monday to Friday when it try to connect as a registered device :
   scope = NormalVlan
   role = nointernet
 
+The second example will create a violation if the SSID is OPEN and the owner is igmout
+
+  [igmout]
+  filter = owner
+  operator = is
+  value = igmout
+
+  [open]
+  filter = ssid
+  operator = is
+  value = OPEN
+
+  [2:igmout&ssid]
+  scope = NormalVlan
+  action = trigger_violation
+  action_param = mac = $mac, tid = 1100012, type = INTERNAL
+
 You can have a look in the file vlan_filters.conf, there are some examples on how to use and define filters.
 
-AD-Integration:
-~~~~~~~~~~~~~~~
+ActiveDirectory Integration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Deleted Account:
-++++++++++++++++
+Deleted Account
+^^^^^^^^^^^^^^^
 
-Create a file unreg_node_deleted_account.ps1 on the Windows Server and make sure to change the @IP_PACKETFENCE. I am using username and password "admin" for the werb services credentials. Make sure the username and password match the credentials defined in the Web admin interface under Configuration > Web Services.
+Create the script `unreg_node_deleted_account.ps1` on the Windows Server with the following content. Make sure to change `@IP_PACKETFENCE` to the IP address of your PacketFence server. You'll also need to change the username and password as they must match the credentials defined in the Web admin interface under *Configuration -> Web Services*.
 
 ----
 #########################################################################################
@@ -2568,12 +2576,12 @@ Get-EventLog -LogName Security -InstanceId 4726 |
    }
 ----
 
-Create the scheduled task based on an event ID:
-+++++++++++++++++++++++++++++++++++++++++++++++
+Create the scheduled task based on an event ID
+++++++++++++++++++++++++++++++++++++++++++++++
 
-*Start* > *Run* > *Taskschd.msc*
+*Start -> Run -> Taskschd.msc*
 
-*Task Scheduler* > *Task Scheduler Library* > *Event Viewer Task* > *Create Task*
+*Task Scheduler -> Task Scheduler Library -> Event Viewer Task -> Create Task*
 
 General
 
@@ -2583,7 +2591,7 @@ Check: Run whether user is logged on or not
 Check: Run with highest privileges
 ----
 
-Triggers > New
+Triggers -> New
 
 ----
 Begin on the task: On an event
@@ -2592,7 +2600,7 @@ Source: Microsoft Windows security auditing.
 Event ID: 4726
 ----
 
-Actions > New
+Actions -> New
 
 ----
 Action: Start a program
@@ -2606,12 +2614,12 @@ Settings:
 At the bottom, select in the list "Run a new instance in parallel" in order to unregister multiple nodes at the same time.
 ----
 
-Validate with Ok and give the account who will run this task. (Usually DOMAIN\Administrator)
+Validate with Ok and give the account who will run this task. (Usually _DOMAIN\Administrator_)
 
-Locked Account:
-+++++++++++++++
+Locked Account
+^^^^^^^^^^^^^^
 
-Create a file unreg_node_locked_account.ps1 on the Windows Server and make sure to change the @IP_PACKETFENCE. I am using username and password "admin" for the web services credentials, Make sure the username and password match the credentials defined in the Web admin interface under Configuration > Web Services.
+Create the script `unreg_node_locked_account.ps1` on the Windows Server with the following content. Make sure to change `@IP_PACKETFENCE` to the IP address of your PacketFence server. You'll also need to change the username and password as they must match the credentials defined in the Web admin interface under *Configuration -> Web Services*.
 
 ----
 #########################################################################################
@@ -2644,12 +2652,12 @@ Get-EventLog -LogName Security -InstanceId 4725 |
    }
 ----
 
-Create the scheduled task based on an event ID:
-+++++++++++++++++++++++++++++++++++++++++++++++
+Create the scheduled task based on an event ID
+++++++++++++++++++++++++++++++++++++++++++++++
 
-*Start* > *Run* > *Taskschd.msc*
+*Start -> Run -> Taskschd.msc*
 
-*Task Scheduler* > *Task Scheduler Library* > *Event Viewer Task* > *Create Task*
+*Task Scheduler -> Task Scheduler Library -> Event Viewer Task -> Create Task*
 
 General
 
@@ -2659,7 +2667,7 @@ Check: Run whether user is logged on or not
 Check: Run with highest privileges
 ----
 
-Triggers > New
+Triggers -> New
 
 ----
 Begin on the task: On an event
@@ -2668,7 +2676,7 @@ Source: Microsoft Windows security auditing.
 Event ID: 4726
 ----
 
-Actions > New
+Actions -> New
 
 ----
 Action: Start a program
@@ -2682,22 +2690,22 @@ Settings:
 At the bottom, select in the list "Run a new instance in parallel"
 ----
 
-Validate with Ok and give the account who will run this task. (Usually DOMAIN\Administrator)
+Validate with Ok and give the account who will run this task. (Usually _DOMAIN\Administrator_)
 
 Firewall SSO
 ------------
 
-This SSO (Single Sign-On) feature is a way to match the Policies of your firewalls after a valid authentication on the captive portal. You can apply policies based on PacketFence's roles (categories). We actually support two ways to inform the firewall, Accounting request and XML request. 
+This SSO (Single Sign-On) feature is a way to match the Policies of your firewalls after a valid authentication on the captive portal. You can apply policies based on PacketFence's roles (categories). We actually support two ways to inform the firewall: _Accounting request_ and _XML request_. 
 
-Fortigate:
-++++++++++
+Fortigate
+~~~~~~~~~
 
 Go to your Fortigate administration webpage.
 
-Agent RSSO configuration:
+Agent RSSO configuration
 +++++++++++++++++++++++++
 
-Go to *User & Device* > *User* > *User Groups* > *Create New*
+Go to *User & Device -> User -> User Groups -> Create New*
 
 ----
 Name: RSSO_group
@@ -2705,19 +2713,19 @@ Type: RADIUS Single Sign-On (RSSO)
 RADIUS Attribute Value: Guest (Put the rolename of PacketFence, it's case sensitive)
 ----
 
-You can also see that in the webpage at *User & Device* > *Monitor* > *Firewall* 
+You can also see that in the webpage at *User & Device -> Monitor -> Firewall*
 
-Activate the Accounting Listening:
-+++++++++++++++++++++++++++++++++++
+Activate the Accounting Listening
++++++++++++++++++++++++++++++++++
 
-Go to *System* > *Network* > *Interfaces*
+Go to *System -> Network -> Interfaces*
 
 Select the interface that will communicate with PacketFence and check : Listen for RADIUS Accounting Messages than validate by OK.
 
-SSO Configuration in PacketFence:
-+++++++++++++++++++++++++++++++++
+SSO Configuration in PacketFence
+++++++++++++++++++++++++++++++++
 
-Go to *Configuration* > *Firewall SSO* > *Add Firewall SSO*
+Go to *Configuration -> Firewall SSO -> Add Firewall SSO*
 
 ----
 Hostname or IP Address: @IP of your firewall
@@ -2727,8 +2735,8 @@ Port: 1813
 Roles: add the roles that you want to do SSO
 ----
 
-Verification:
-+++++++++++++
+Verification
+++++++++++++
 
 If you want to see if it's working, you can log into the firewall over SSH and run these following commands:
 
@@ -2737,22 +2745,22 @@ di debug enable
 di debug application radiusd -1
 ----
 
-PaloAlto:
-+++++++++
+PaloAlto
+~~~~~~~~
 
 You have to log in the webpage of your PaloAlto Firewall.
 
-- Create a SSO_Role role:
-+++++++++++++++++++++++++
+Create a SSO role
++++++++++++++++++
 
-Go to *Device* > *Admin Roles* > *Add*
+Go to *Device -> Admin Roles -> Add*
 
 Create the role name SSO_Role, under the 'XML API' tab enable everything and validate it with OK.
 
-- Create the account in PAN-OS:
-+++++++++++++++++++++++++++++++
+Create the account in PAN-OS
+++++++++++++++++++++++++++++
 
-Go to *Device* > *Administrator* > *Add*
+Go to *Device -> Administrator -> Add*
 
 ----
 Name: xmluser
@@ -2763,13 +2771,12 @@ Profile: SSO_Role (Previously created)
 Password Profile: None
 ----
 
-Get the XML Key:
-++++++++++++++++
+Get the XML Key
++++++++++++++++
 
-Go on your broswer : https://@IP-of-PaloAlto/api/?type=keygen&user=xmluser&password=xmluser
-(Put user=Username&password=Yourpassword)
+Hit the following page in your browser: https://@IP-of-PaloAlto/api/?type=keygen&user=xmluser&password=xmluser
 
-it should display :
+It should display:
 
 ----
 <response status="success">
@@ -2781,10 +2788,10 @@ LUFRPT1jeFV6SHd1QnJHaU55dnYvRlFNSkJNeTR6Uzg9TDgzNVljL000eDVnWHg2VTdwNUJHMlFGcHFC
 </response>
 ----
 
-SSO Configuration PF:
-+++++++++++++++++++++
+SSO Configuration PF
+++++++++++++++++++++
 
-Go to Configuration > Firewall SSO > Add Firewall SSO
+Go to *Configuration -> Firewall SSO -> Add Firewall SSO*
 
 ----
 Hostname or IP Address: @IP of your firewall
@@ -2794,10 +2801,10 @@ Port: 443
 Roles: add the roles that you want to do SSO
 ----
 
-Verification:
-+++++++++++++
+Verification
+++++++++++++
 
-Log into the ssh console on the PaloAlto and run this command :
+Log in over SSH on the PaloAlto firewall and run this command:
 
 ----
 show user ip-user-mapping all
@@ -2806,7 +2813,7 @@ show user ip-user-mapping all
 Operating System Best Practices
 -------------------------------
 
-Iptables
+IPTables
 ~~~~~~~~
 
 IPTables is now entirely managed by PacketFence. However, if you need to perform some custom rules, you can modify `conf/iptables.conf` to your own needs. However, the default template should work for most users.
@@ -2814,21 +2821,16 @@ IPTables is now entirely managed by PacketFence. However, if you need to perform
 Log Rotations
 ~~~~~~~~~~~~~
 
-PacketFence can generate a lot of log entries in huge production environments. This is why we recommend to use either `logrotate` to periodically rotate your logs.
-
-Logrotate (recommended)
-~~~~~~~~~~~~~~~~~~~~~~~
-
-This is the easiest way to rotate your logs. In fact, a working logrotate script is provided with the PacketFence package. This script is located in `/usr/local/pf/addons`, and it's configured to do a weekly log rotation and keeping old logs with compression. It has been added during PacketFence initial installation.
+PacketFence can generate a lot of log entries in huge production environments. This is why we recommend to use `logrotate` to periodically rotate your logs. A working logrotate script is provided with the PacketFence package. This script is located in `/usr/local/pf/addons`, and it's configured to do a weekly log rotation and keeping old logs with compression. It has been added during PacketFence initial installation.
 
 High Availability
 ~~~~~~~~~~~~~~~~~
 
 A high availability setup (active/passive) for PacketFence can be created using two PacketFence servers and the following open source utilities:
 
-Linux-HA (www.linux-ha.org)::
+http://www.linux-ha.org/[Linux-HA]::
 A daemon that provides cluster infrastructure to its clients. Heartbeat would be responsible for starting the PacketFence services, eventually 
-DRBD (www.drbd.org)::
+http://www.drbd.org/[DRBD]::
 A network based raid-1.
 
 Since PacketFence stores most of its information in a MySQL database, the two PacketFence redundant servers need to share this database in a way or another.
@@ -2858,10 +2860,7 @@ We assume that:
 Creation of the DRBD partition
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-During the OS installation, reduce the size of the main partition and create a new one (that will be used for the replicated MySQL database) of 30G. In order to do so, on `VolGroup00`:
-
-[options="compact"]
-* leave at least 30G of drive space for a new partition. *Do not* create that partition during the install process, we will do it later.
+During the OS installation, reduce the size of the main partition and create a new one (that will be used for the replicated MySQL database) of 30G. *Do not* create that partition during the install process, we will do it later.
 
 Partitioning
 ^^^^^^^^^^^^
@@ -3154,10 +3153,10 @@ Performance optimization
 MySQL optimizations
 ~~~~~~~~~~~~~~~~~~~
 
-Tuning MySQL itself
-^^^^^^^^^^^^^^^^^^^
+Tuning MySQL
+^^^^^^^^^^^^
 
-If you're PacketFence system is acting *very slow*, this could be due to your MySQL configuration. You should do the following to tune performance:
+If you're PacketFence system is acting very slow, this could be due to your MySQL configuration. You should do the following to tune performance:
 
 Check the system load
 

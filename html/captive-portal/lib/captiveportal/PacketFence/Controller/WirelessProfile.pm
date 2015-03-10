@@ -26,13 +26,22 @@ Catalyst Controller.
 sub index : Path : Args(0) {
     my ( $self, $c ) = @_;
     my $username = $c->session->{username} || '';
+    my $mac = $c->portalSession->clientMac;
+    my $provisioner = $c->profile->findProvisioner($mac);
+    $provisioner->authorize($mac) if (defined($provisioner));
     $c->stash(
         template     => 'wireless-profile.xml',
         current_view => 'MobileConfig',
-        ssid         => $Config{'provisioning'}{'ssid'},
+        provisioner  => $provisioner,
         username     => $username
     );
 }
+
+sub profile_xml : Path('/profile.xml') : Args(0) {
+    my ( $self, $c ) = @_;
+    $c->stash->{filename} = 'profile.xml';
+    $c->forward('index');
+}  
 
 =head1 AUTHOR
 
@@ -40,7 +49,7 @@ Inverse inc. <info@inverse.ca>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2014 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

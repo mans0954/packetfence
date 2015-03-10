@@ -23,7 +23,7 @@ use File::Spec::Functions;
 our (
     #Directories
     $install_dir, $bin_dir, $conf_dir, $lib_dir, $log_dir, $generated_conf_dir, $var_dir,
-    $tt_compile_cache_dir,
+    $tt_compile_cache_dir, $pfconfig_cache_dir,
 
     #Config files
     #pf.conf.default
@@ -48,7 +48,7 @@ our (
     $switches_config_file, $violations_config_file, $authentication_config_file,
     $chi_config_file, $ui_config_file, $floating_devices_file, $log_config_file,
     @stored_config_files, @log_files,
-    $mdm_config_file,
+    $provisioning_config_file,
     $admin_roles_config_file,
     $wrix_config_file,
     $firewall_sso_config_file,
@@ -58,6 +58,7 @@ our (
     $log_conf_dir,
     $vlan_filters_config_file,
     $pfcmd_binary,
+    $realm_config_file,
 );
 
 BEGIN {
@@ -70,7 +71,7 @@ BEGIN {
     # Categorized by feature, pay attention when modifying
     @EXPORT = qw(
         $install_dir $bin_dir $conf_dir $lib_dir $log_dir $generated_conf_dir $var_dir
-        $tt_compile_cache_dir
+        $tt_compile_cache_dir $pfconfig_cache_dir
         $default_config_file $pf_default_file
         $config_file $pf_config_file
         $network_config_file
@@ -83,7 +84,7 @@ BEGIN {
         $switches_config_file $violations_config_file $authentication_config_file
         $chi_config_file $ui_config_file $floating_devices_file $log_config_file
         @stored_config_files @log_files
-        $mdm_config_file
+        $provisioning_config_file
         $admin_roles_config_file
         $wrix_config_file
         @stored_config_files
@@ -94,6 +95,7 @@ BEGIN {
         $log_conf_dir
         $vlan_filters_config_file
         $pfcmd_binary
+        $realm_config_file
     );
 }
 
@@ -109,6 +111,7 @@ $log_conf_dir  = catdir( $conf_dir,"log.conf.d" );
 
 $generated_conf_dir   = catdir( $var_dir,"conf");
 $tt_compile_cache_dir = catdir( $var_dir,"tt_compile_cache");
+$pfconfig_cache_dir = catdir( $var_dir,"cache/pfconfig");
 
 $pfcmd_binary   = catfile($bin_dir, "pfcmd");
 
@@ -120,7 +123,7 @@ $pf_config_file  = catfile($conf_dir, "pf.conf"); # TODO: Adjust. See $config_fi
 $pf_default_file = catfile($conf_dir, "pf.conf.defaults"); # TODO: Adjust. See $default_config_file
 $chi_config_file = catfile($conf_dir, "chi.conf");
 $log_config_file = catfile($conf_dir, "log.conf");
-$mdm_config_file = catfile($conf_dir, 'mdm.conf');
+$provisioning_config_file = catfile($conf_dir, 'provisioning.conf');
 
 $network_config_file    = catfile($conf_dir, "networks.conf");
 $switches_config_file   = catfile($conf_dir, "switches.conf");
@@ -139,6 +142,7 @@ $allowed_device_types_file = catfile($conf_dir,"allowed_device_types.txt");
 $apache_filters_config_file = catfile($conf_dir, "apache_filters.conf");
 $vlan_filters_config_file = catfile($conf_dir, "vlan_filters.conf");
 $firewall_sso_config_file =  catfile($conf_dir,"firewall_sso.conf");
+$realm_config_file = catfile($conf_dir,"realm.conf");
 
 $oui_url               = 'http://standards.ieee.org/regauth/oui/oui.txt';
 $dhcp_fingerprints_url = 'http://www.packetfence.org/dhcp_fingerprints.conf';
@@ -161,7 +165,7 @@ $dhcp_fingerprints_url = 'http://www.packetfence.org/dhcp_fingerprints.conf';
     $dhcp_fingerprints_file, $profiles_config_file,
     $oui_file, $floating_devices_file,
     $chi_config_file,$allowed_device_oui_file,$allowed_device_types_file,
-    $ui_config_file,$mdm_config_file,$oauth_ip_file,$log_config_file,
+    $ui_config_file,$provisioning_config_file,$oauth_ip_file,$log_config_file,
     $admin_roles_config_file,$wrix_config_file,$apache_filters_config_file,
     $vlan_filters_config_file,$firewall_sso_config_file,
 );
@@ -177,11 +181,11 @@ Inverse inc. <info@inverse.ca>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 
-This program is free software; you can redistribute it and::or
+This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
 as published by the Free Software Foundation; either version 2
 of the License, or (at your option) any later version.

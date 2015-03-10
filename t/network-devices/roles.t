@@ -19,7 +19,10 @@ use lib '/usr/local/pf/lib';
 use Test::More;
 use Test::NoWarnings;
 
-use lib qw(/usr/local/pf/t);
+BEGIN {
+    use lib qw(/usr/local/pf/t);
+    use PfFilePaths;
+}
 use TestUtils;
 
 my @supports_roles;
@@ -52,7 +55,7 @@ Inverse inc. <info@inverse.ca>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

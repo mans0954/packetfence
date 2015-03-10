@@ -28,12 +28,9 @@ sub description { 'EdgeCore' }
 
 =head1 SUBROUTINES
 
-=over
-
 =cut
-sub supportsWiredMacAuth { return $TRUE; }
 
-=back
+sub supportsWiredMacAuth { return $TRUE; }
 
 =head1 AUTHOR
 
@@ -41,7 +38,7 @@ Inverse inc. <info@inverse.ca>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2014 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

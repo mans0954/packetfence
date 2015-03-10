@@ -17,6 +17,10 @@ use warnings;
 use File::Slurp qw(read_dir);
 use Test::Harness;
 use File::Spec::Functions;
+BEGIN {
+    use lib qw(/usr/local/pf/t);
+    use PfFilePaths;
+}
 
 runtests(
     map { $_=catfile('ConfigStore',$_) }
@@ -28,11 +32,9 @@ runtests(
 
 Inverse inc. <info@inverse.ca>
 
-Minor parts of this file may have been contributed. See CREDITS.
-
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

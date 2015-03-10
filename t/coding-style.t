@@ -8,13 +8,17 @@ coding-style.t
 Test validating coding style guidelines.
 
 =cut
+
 use strict;
 use warnings;
 use diagnostics;
 
 use Test::More;
 use Test::NoWarnings;
-use lib qw(/usr/local/pf/t);
+BEGIN {
+    use lib qw(/usr/local/pf/t);
+    use PfFilePaths;
+}
 
 use TestUtils qw(get_all_perl_binaries get_all_perl_cgi get_all_perl_modules get_all_php);
 
@@ -54,7 +58,7 @@ Inverse inc. <info@inverse.ca>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

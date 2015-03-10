@@ -4,10 +4,11 @@ use strict;
 use warnings;
 use diagnostics;
 
-use lib qw(
-   /usr/local/pf/conf
-   /usr/local/pf/lib
-);
+use lib qw(/usr/local/pf/lib);
+BEGIN {
+    use lib qw(/usr/local/pf/t);
+    use PfFilePaths;
+}
 
 use Test::Pod::Coverage tests => 24;
 
@@ -49,7 +50,7 @@ Inverse inc. <info@inverse.ca>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
     

@@ -34,7 +34,7 @@ use pf::config;
 
 =head1 CONFIGURATION VALIDATION
 
-=item pf::services::manager::httpd
+=head2 pf::services::manager::httpd
 
 =cut
 
@@ -55,9 +55,10 @@ $max_clients = pf::services::manager::httpd::calculate_max_clients(24576 * 1024)
 ok(250 < $max_clients && $max_clients < 513, "MaxClients for 24Gb RAM");
 
 
-=item pf::services::manager::snmptrapd
+=head2 pf::services::manager::snmptrapd
 
 =cut
+
 # forcing an switchFactory instance with the test config file
 pf::SwitchFactory->getInstance;
 
@@ -88,7 +89,7 @@ Inverse inc. <info@inverse.ca>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

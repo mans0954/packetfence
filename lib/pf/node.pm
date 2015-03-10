@@ -127,7 +127,7 @@ sub node_db_prepare {
             detect_date=?, regdate=?, unregdate=?, lastskip=?, time_balance=?, bandwidth_balance=?,
             user_agent=?, computername=?, dhcp_fingerprint=?,
             last_arp=?, last_dhcp=?,
-            notes=?, autoreg=?, sessionid=? 
+            notes=?, autoreg=?, sessionid=?, machine_account=?
         WHERE mac=?
     ]);
 
@@ -137,7 +137,7 @@ sub node_db_prepare {
             detect_date, regdate, unregdate, lastskip, time_balance, bandwidth_balance,
             user_agent, computername, dhcp_fingerprint,
             last_arp, last_dhcp,
-            node.notes, autoreg, sessionid 
+            node.notes, autoreg, sessionid, machine_account 
         FROM node
             LEFT JOIN node_category USING (category_id)
         WHERE mac = ?
@@ -149,7 +149,7 @@ sub node_db_prepare {
             detect_date, regdate, unregdate, lastskip,
             user_agent, computername, IFNULL(os_class.description, ' ') as dhcp_fingerprint,
             last_arp, last_dhcp,
-            node.notes, autoreg, sessionid 
+            node.notes, autoreg, sessionid, machine_account 
         FROM node
             LEFT JOIN node_category USING (category_id)
             LEFT JOIN dhcp_fingerprint ON node.dhcp_fingerprint=dhcp_fingerprint.fingerprint
@@ -168,6 +168,7 @@ sub node_db_prepare {
             locationlog.switch as last_switch, locationlog.port as last_port, locationlog.vlan as last_vlan,
             IF(ISNULL(locationlog.connection_type), '', locationlog.connection_type) as last_connection_type,
             locationlog.dot1x_username as last_dot1x_username, locationlog.ssid as last_ssid,
+            locationlog.stripped_user_name as stripped_user_name, locationlog.realm as realm,
             COUNT(DISTINCT violation.id) as nbopenviolations,
             node.notes
         FROM node
@@ -184,7 +185,7 @@ sub node_db_prepare {
             node.detect_date, node.regdate, node.unregdate, node.lastskip, node.time_balance, node.bandwidth_balance,
             node.user_agent, node.computername, node.dhcp_fingerprint,
             node.last_arp, node.last_dhcp,
-            node.notes, node.autoreg, node.sessionid,
+            node.notes, node.autoreg, node.sessionid, node.machine_account,
             UNIX_TIMESTAMP(node.regdate) AS regdate_timestamp,
             UNIX_TIMESTAMP(node.unregdate) AS unregdate_timestamp
         FROM node
@@ -203,6 +204,7 @@ sub node_db_prepare {
            locationlog.switch as last_switch, locationlog.port as last_port, locationlog.vlan as last_vlan,
            IF(ISNULL(locationlog.connection_type), '', locationlog.connection_type) as last_connection_type,
            locationlog.dot1x_username as last_dot1x_username, locationlog.ssid as last_ssid,
+           locationlog.stripped_user_name as stripped_user_name, locationlog.realm as realm,
            locationlog.start_time as last_start_time,
            UNIX_TIMESTAMP(locationlog.start_time) as last_start_timestamp
        FROM locationlog
@@ -219,6 +221,7 @@ sub node_db_prepare {
             locationlog.switch as last_switch, locationlog.port as last_port, locationlog.vlan as last_vlan,
             IF(ISNULL(locationlog.connection_type), '', locationlog.connection_type) as last_connection_type,
             locationlog.dot1x_username as last_dot1x_username, locationlog.ssid as last_ssid,
+            locationlog.stripped_user_name as stripped_user_name, locationlog.realm as realm,
             COUNT(DISTINCT violation.id) as nbopenviolations,
             node.notes
         FROM node
@@ -245,6 +248,7 @@ sub node_db_prepare {
             locationlog.switch as last_switch, locationlog.port as last_port, locationlog.vlan as last_vlan,
             IF(ISNULL(locationlog.connection_type), '', locationlog.connection_type) as last_connection_type,
             locationlog.dot1x_username as last_dot1x_username, locationlog.ssid as last_ssid,
+            locationlog.stripped_user_name as stripped_user_name, locationlog.realm as realm,
             iplog.ip as last_ip,
             COUNT(DISTINCT violation.id) as nbopenviolations,
             node.notes
@@ -799,7 +803,7 @@ sub node_modify {
         $existing->{lastskip}, $existing->{time_balance}, $existing->{bandwidth_balance},
         $existing->{user_agent}, $existing->{computername}, $existing->{dhcp_fingerprint},
         $existing->{last_arp}, $existing->{last_dhcp},
-        $existing->{notes},$existing->{autoreg},$existing->{sessionid},
+        $existing->{notes},$existing->{autoreg},$existing->{sessionid},$existing->{machine_account},
         $mac
     );
     return ($sth->rows);
@@ -822,13 +826,14 @@ sub node_register {
     if ( !pf::person::person_exist($pid) ) {
         $logger->info("creating person $pid because it doesn't exist");
         pf::person::person_add($pid);
-        pf::lookup::person::lookup_person($pid);
+        pf::lookup::person::lookup_person($pid,$info{'source'});
+
     } else {
         $logger->debug("person $pid already exists");
     }
     pf::person::person_modify($pid,
                     'source'  => $info{'source'},
-                    'portal'     => $info{'portal'},
+                    'portal'  => $info{'portal'},
     );
     delete $info{'source'};
     delete $info{'portal'};
@@ -842,7 +847,7 @@ sub node_register {
             $logger->error("modify of node $mac failed");
             return (0);
         }
-           $logger->info("autoregister a node that is already registered, do nothing.");
+           $logger->info("[$mac] autoregister a node that is already registered, do nothing.");
            return 1;
        }
     }
@@ -1209,7 +1214,7 @@ Minor parts of this file may have been contributed. See CREDITS.
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 Copyright (C) 2005 Kevin Amorin
 

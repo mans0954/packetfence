@@ -16,6 +16,10 @@ use diagnostics;
 
 use Test::More tests => 1;
 use lib '/usr/local/pf/lib';
+BEGIN {
+    use lib qw(/usr/local/pf/t);
+    use PfFilePaths;
+}
 BEGIN { use_ok('pf::person') }
 
 # TODO really? That's it?
@@ -26,7 +30,7 @@ Inverse inc. <info@inverse.ca>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
     

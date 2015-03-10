@@ -93,6 +93,11 @@ has_field 'last_dot1x_username' =>
    type => 'Uneditable',
    label => '802.1X Username',
   );
+has_field 'bypass_vlan' =>
+  (
+   type => 'Text',
+   label => 'Bypass VLAN',
+  );
 has_field 'user_agent' =>
   (
    type => 'Uneditable',
@@ -160,7 +165,7 @@ sub validate {
 
 =head1 COPYRIGHT
 
-Copyright (C) 2012 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

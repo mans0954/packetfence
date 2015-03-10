@@ -1,14 +1,15 @@
 #!/usr/bin/perl
 
-=item NAME
+=head1 NAME
 
 coa-calls.pl
 
-=item DESCRIPTION
+=head1 DESCRIPTION
 
 Create several CoA / Disconnect requests in a multi-threaded fashion to validate that we don't have concurrency issues.
 
 =cut
+
 use strict;
 use warnings;
 
@@ -81,7 +82,7 @@ Inverse inc. <info@inverse.ca>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

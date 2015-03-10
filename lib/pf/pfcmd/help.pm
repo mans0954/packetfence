@@ -152,6 +152,7 @@ watch acts as a service watcher which can send email/restart the services
 Services managed by PacketFence:
   dhcpd            | dhcpd daemon
   httpd.webservices| Apache Webservices
+  httpd.aaa        | Apache AAA webservice 
   httpd.admin      | Apache Web admin
   httpd.portal     | Apache Captive Portal
   httpd.proxy      | Apache Proxy Interception
@@ -705,7 +706,7 @@ Minor parts of this file may have been contributed. See CREDITS.
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 Copyright (C) 2005 Kevin Amorin
 

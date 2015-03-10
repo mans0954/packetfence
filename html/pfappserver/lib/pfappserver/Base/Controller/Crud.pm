@@ -29,9 +29,6 @@ sub create :Local :Args(0) {
         # Create the source from the update action
     } else {
         # Show an empty form
-        $c->stash(
-            form => $self->getForm($c)
-        );
         $c->forward('view');
     }
 }
@@ -216,7 +213,7 @@ sub list :Local :Args(0) {
 
 =head1 COPYRIGHT
 
-Copyright (C) 2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

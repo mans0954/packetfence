@@ -15,6 +15,10 @@ use strict;
 use warnings;
 use Time::HiRes qw(sleep);
 use lib '/usr/local/pf/lib';
+BEGIN {
+    use lib qw(/usr/local/pf/t);
+    use PfFilePaths;
+}
 
 use Test::More tests => 14;                      # last test to print
 
@@ -98,11 +102,9 @@ sub waitForPid {
 
 Inverse inc. <info@inverse.ca>
 
-Minor parts of this file may have been contributed. See CREDITS.
-
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

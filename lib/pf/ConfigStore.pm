@@ -176,7 +176,14 @@ sub read {
         my @default_params = $config->Parameters($config->{default}) if exists $config->{default};
         $data->{$idKey} = $id if defined $idKey;
         foreach my $param (uniq $config->Parameters($id),@default_params) {
-            $data->{$param} = $config->val( $id, $param);
+            my $val;
+            my @vals = $config->val($id, $param);
+            if (@vals == 1 ) {
+                $val = $vals[0];
+            } else {
+                $val = \@vals;
+            }
+            $data->{$param} = $val;
         }
         $self->cleanupAfterRead($id,$data);
     }
@@ -381,14 +388,19 @@ sub flatten_list {
 sub commit {
     my ($self) = @_;
     my $result;
+    my $error;
     eval {
         $result = $self->rewriteConfig();
     };
-    get_logger->error($@) if $@;
+    if($@) {
+        $error = $@;
+        get_logger->error($error);
+    }
     unless($result) {
+        $error //= "Unable to commit changes to file please run pfcmd fixpermissions and try again";
         $self->rollback();
     }
-    return $result;
+    return ($result,$error);
 }
 
 =head2 search
@@ -405,7 +417,7 @@ __PACKAGE__->meta->make_immutable;
 
 =head1 COPYRIGHT
 
-Copyright (C) 2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

@@ -1,5 +1,5 @@
 Source: packetfence
-Section: main/net
+Section: net
 Priority: optional
 Maintainer: Durand fabrice <fdurand@inverse.ca>
 Build-Depends: debhelper (>= 7.0.50~), gettext, libparse-recdescent-perl, gcc
@@ -12,10 +12,10 @@ XS-Testsuite: autopkgtest
 Package: packetfence
 Architecture: all
 # TODO: We can probably move these in Depends since 3.5.0 (managed RADIUS feature)
-Pre-Depends:  freeradius (>= 2.2.5), freeradius-ldap, freeradius-postgresql,
- freeradius-mysql, freeradius-krb5, dhcp3-server
+Pre-Depends:  ca-certificates, freeradius (>= 2.2.5), freeradius-ldap, freeradius-postgresql,
+ freeradius-mysql, freeradius-krb5, dhcp3-server, ca-certificates, packetfence-pfcmd-suid, packetfence-config
 Breaks: libdata-alias-perl
-Depends: ${misc:Depends}, vlan, make, patch,
+Depends: ${misc:Depends}, vlan, make,
  openssl, openssl-blacklist, openssl-blacklist-extra,
  mysql-server|mariadb-server|mariadb-galera-server, memcached,
  snmp, snmptrapfmt, snmp-mibs-downloader, conntrack,
@@ -47,7 +47,7 @@ Depends: ${misc:Depends}, vlan, make, patch,
  libtest-pod-coverage-perl, libthread-pool-simple-perl,
  libuniversal-require-perl, libuniversal-exports-perl, libnet-rawip-perl,
  libcgi-session-perl, libcgi-session-driver-chi-perl (>= 1.0.3), libconfig-inifiles-perl (>= 2.78.0),
- libdatetime-format-dateparse-perl, libdbi-perl,librose-db-perl,librose-db-object-perl,
+ libdatetime-format-dateparse-perl, libdatetime-format-rfc3339-perl, libdbi-perl,librose-db-perl,librose-db-object-perl,
  libnet-telnet-perl, libregexp-common-perl,
  libreadonly-perl, libtemplate-perl, libterm-readkey-perl,
  libuniversal-require-perl, libthread-serialize-perl,
@@ -58,7 +58,7 @@ Depends: ${misc:Depends}, vlan, make, patch,
  perl-modules,libdata-swap-perl,libdata-structure-util-perl,
  liblinux-fd-perl, liblinux-inotify2-perl, libfile-touch-perl, libhash-merge-perl,
  libcrypt-openssl-x509-perl,libconst-fast-perl,
- libtime-period-perl, libsereal-encoder-perl, libsereal-decoder-perl, libdata-serializer-sereal-perl (>= 1.04),
+ libtime-period-perl, libsereal-encoder-perl, libsereal-decoder-perl, libdata-serializer-sereal-perl (>= 1.04), libphp-serialization-perl,
 # hard-coded to specific version because v3 broke the API and we haven't ported to it yet
 # see #1313: Port our Net-Appliance-Session to the version 3 API
 # http://packetfence.org/bugs/view.php?id=1313
@@ -81,7 +81,7 @@ Depends: ${misc:Depends}, vlan, make, patch,
  libauthen-htpasswd-perl, libcatalyst-authentication-credential-http-perl, 
  libcatalyst-authentication-store-htpasswd-perl, libcatalyst-plugin-unicode-encoding-perl,
  libcatalyst-view-tt-perl, libhtml-formfu-perl, libjson-perl, libjson-xs-perl,
- libsort-naturally-perl, libhtml-formhandler-perl (<= 0.40016), libchi-perl (>=0.56),
+ libsort-naturally-perl, libhtml-formhandler-perl (<= 0.40016), libchi-perl (>=0.59),
  libchi-driver-memcached-perl,libcache-memcached-perl, libcache-memcached-getparserxs-perl, libdata-serializer-perl,
  libcache-fastmmap-perl, libmoo-perl (>=1.001000), libterm-size-any-perl,
 # packaging workaround (we don't require it but something in catalyst seem to do)
@@ -101,8 +101,7 @@ Depends: ${misc:Depends}, vlan, make, patch,
  libauthen-radius-perl, libauthen-krb5-simple-perl,
 # used by bin/pftest
  libio-interactive-perl,
-# required for perl 5.12+ (made perl setuid optional) and most distros went without it
- packetfence-pfcmd-suid
+Recommends:  freeradius (>= 2.2.5), freeradius-ldap, freeradius-postgresql, freeradius-mysql, freeradius-krb5, isc-dhcp-server | dhcp3-server
 Description: PacketFence network registration / worm mitigation system
  PacketFence is an open source network access control (NAC) system.
  It can be used to effectively secure networks, from small to very large
@@ -142,7 +141,7 @@ Description: Test suite for packetfence
 
 Package: packetfence-pfcmd-suid
 Architecture: any
-Depends: ${misc:Depends}, packetfence (>= 3.6.0)
+Depends: ${misc:Depends}, ${shlibs:Depends}
 Replaces: packetfence (<< 3.6.0)
 Breaks: packetfence (<< 3.6.0)
 Description: C wrapper that replace perl-suid dependence
@@ -158,3 +157,8 @@ Depends: ${misc:Depends}, libfile-tail-perl, libconfig-inifiles-perl (>= 2.4.0),
 Conflicts: packetfence
 Description: Files needed for sending MAC and IP from ARP requeststo
  PacketFence server. 
+
+Package: packetfence-config
+Architecture: all
+Depends: ${misc:Depends}, libcache-bdb-perl, liblog-fast-perl
+Description: Service use to manage PacketFence configuration.

@@ -37,11 +37,29 @@ sub showError {
     } else {
         $text_message = i18n($error);
     }
+    utf8::decode($text_message);
     $c->stash(
         template    => 'error.html',
         txt_message => $text_message,
     );
     $c->detach;
+}
+
+=head2 reached_retry_limit
+
+Test if the retry limit has been reached for a session key
+If the max is undef or 0 then check is disabled
+
+=cut
+
+sub reached_retry_limit {
+    my ( $self, $c, $retry_key, $max ) = @_;
+    return 0 unless $max;
+    my $cache = $c->user_cache;
+    my $retries = $cache->get($retry_key) || 1;
+    $retries++;
+    $cache->set($retry_key,$retries,$c->profile->{_block_interval});
+    return $retries > $max;
 }
 
 =head1 AUTHOR
@@ -50,11 +68,11 @@ Inverse inc. <info@inverse.ca>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 
-This program is free software; you can redistribute it and::or
+This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
 as published by the Free Software Foundation; either version 2
 of the License, or (at your option) any later version.

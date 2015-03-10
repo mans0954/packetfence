@@ -14,6 +14,7 @@ One day L<pf::import> will support what we need and this script will be removed.
 ./import-node-csv.pl -mode=reg -file=/root/file.csv
 
 =cut
+
 require 5.8.5;
 use strict;
 use warnings;
@@ -108,7 +109,7 @@ Inverse inc. <info@inverse.ca>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

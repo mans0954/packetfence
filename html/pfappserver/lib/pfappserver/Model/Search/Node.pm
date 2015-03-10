@@ -69,7 +69,7 @@ sub do_query {
 sub add_searches {
     my ($self,$builder,$params) = @_;
     my @searches = map {$self->process_query($_)} @{$params->{searches}};
-    my $all_or_any = $params->{all_or_any};
+    my $all_or_any = $params->{all_or_any} || 'all';
     if ($all_or_any eq 'any' ) {
         $all_or_any = 'or';
     } else {
@@ -281,21 +281,11 @@ sub add_order_by {
 
 sub add_date_range {
     my ($self, $builder, $params, $start, $end) = @_;
-    if ($start || $end) {
-        unless (grep { $_->{name} eq 'switch_ip'} @{$params->{searches}}) {
-            $builder->from(@{$COLUMN_MAP{switch_ip}{'joins'}})
-        }
-        if ($start) {
-            $builder->where({ table =>'locationlog', name => 'start_time' }, '>=', $start);
-        }
-        if ($end) {
-            $builder
-                ->where('(')
-                ->where({ table =>'locationlog', name => 'end_time' }, '<=' , $end)
-                ->or()
-                ->where({ table =>'locationlog', name => 'end_time' }, 'IS NULL')
-                ->where(')');
-        }
+    if ($start) {
+        $builder->where('detect_date', '>=', "$start 00:00");
+    }
+    if ($end) {
+        $builder->where('detect_date', '<=', "$end 23:59");
     }
 }
 
@@ -320,7 +310,7 @@ __PACKAGE__->meta->make_immutable;
 
 =head1 COPYRIGHT
 
-Copyright (C) 2013-2014 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

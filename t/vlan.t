@@ -8,6 +8,7 @@ vlan.t
 pf::vlan module testing
 
 =cut
+
 use strict;
 use warnings;
 use diagnostics;
@@ -163,7 +164,7 @@ Inverse inc. <info@inverse.ca>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

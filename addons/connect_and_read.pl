@@ -28,6 +28,7 @@ This script tries to connect to all switches configured in the
 switches.conf file and to execute some simple SNMP reads.
 
 =cut
+
 # TODO make it work with most switches then call it pfdiag and place in bin/
 use strict;
 use warnings;
@@ -112,7 +113,7 @@ Inverse inc. <info@inverse.ca>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

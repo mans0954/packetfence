@@ -1,5 +1,5 @@
-PacketFence Network Devices Configuration Guide
-===============================================
+Network Devices Configuration Guide
+===================================
 :encoding: UTF-8
 :lang: en
 :doctype: book
@@ -529,6 +529,8 @@ PacketFence supports Cisco switches with VoIP using three different trap types:
 * MAC Notification 
 * Port Security (with static MACs) 
 
+You also need to make sure that lldp or cdp notification is configured on all ports that will handle VoIP.
+
 On some recent models, we can also use more secure and robust features like: 
 
 * MAC Authentication (Cisco's MAC Authentication Bypass or MAB) 
@@ -584,6 +586,11 @@ handle VoIP with this switch, go with a 802.1X configuration.
 
 802.1X
 ++++++
+
+[WARNING]
+====
+Make sure that you have a local account, because enabling 802.1X or MAB will ask for a username and password on the next login.
+====
 
 Global config settings:
 
@@ -784,6 +791,11 @@ can only support 802.1X with MAB using Multi-Host, MAB, and Port-Security.
 802.1X with MAC Authentication bypass (Multi­Domain) 
 ++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+[WARNING]
+====
+Make sure that you have a local account, because enabling 802.1X or MAB will ask for a username and password on the next login.
+====
+
 Global config settings:
 
   dot1x system-auth-control 
@@ -824,9 +836,19 @@ CoA configuration
   aaa server radius dynamic-author
    client 192.168.1.5 server-key useStrongerSecret
   port 3799
+  
+Activate the snmp v1 on the switch:
+
+  snmp-server community public RO
+
 
 802.1X with MAC Authentication bypass (Multi­Host)
 ++++++++++++++++++++++++++++++++++++++++++++++++++
+
+[WARNING]
+====
+Make sure that you have a local account, because enabling 802.1X or MAB will ask for a username and password on the next login.
+====
 
 Global config settings:
 
@@ -867,8 +889,17 @@ CoA configuration
    client 192.168.1.5 server-key useStrongerSecret
   port 3799
 
+Activate the snmp v1 on the switch:
+
+  snmp-server community public RO
+
 MAC Authentication bypass only 
 ++++++++++++++++++++++++++++++
+
+[WARNING]
+====
+Make sure that you have a local account, because enabling 802.1X or MAB will ask for a username and password on the next login.
+====
 
 Global config settings 
 
@@ -908,6 +939,10 @@ CoA configuration
   aaa server radius dynamic-author
    client 192.168.1.5 server-key useStrongerSecret
   port 3799
+
+Activate the snmp v1 on the switch:
+
+  snmp-server community public RO
 
 [NOTE]
 .802.1X on various models of 2960
@@ -1960,6 +1995,47 @@ Don't forget to permit address moves and the reauth period.  x represents the po
    
 (Thanks to Jean-Francois Laporte for this contribution)
 
+2610
+^^^^
+
+802.1X
+++++++
+
+Define the RADIUS server host:
+
+   radius-server host 192.168.1.5 key "useStrongerSecret"
+   radius-server host 192.168.1.5 acct-port 1813 key "useStrongerSecret"
+
+Define the SNMP configuration:
+
+   snmp-server host 192.168.1.5 community "public" informs trap-level not-info
+   no snmp-server enable traps link-change C1
+
+Configure the server-group:
+
+   aaa server-group radius "packetfence" host 192.168.1.5
+
+Configure authentication:
+
+   aaa authentication port-access eap-radius server-group "packetfence"
+   aaa authentication mac-based chap-radius server-group "packetfence"
+
+Configure the port-security:
+
+   port-security C1 learn-mode port-access action send-alarm
+
+Configuration of the port:
+
+   aaa port-access authenticator C1
+   aaa port-access authenticator C1 client-limit 1
+   aaa port-access authenticator active
+   aaa port-access mac-based C1
+   aaa port-access mac-based C1 addr-moves
+   aaa port-access mac-based C1 reauth-period 14400
+   aaa port-access C1 controlled-direction in   
+
+(Thanks to Denis Bonnenfant for this contribution)
+
 4100, 5300, 5400 Series
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1994,7 +2070,6 @@ In order to have MAC Authentication working with VoIP, you need to ensure that t
 *Finally, make sure to change the value of the $VOICEVLANAME variable in the Procurve 5400 module's source code.*
 
 RADIUS configuration
-
   radius-server host 192.168.1.5 key strongKey
 
 MAC Authentication
@@ -2258,6 +2333,45 @@ protocols {
 }
 Ctrl-D
 # commit comment "packetfenced dot1x"
+----
+
+Configuration for MAC authentication floating devices
++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+To support floating devices on a Juniper switch you need to configure the 'flap-on-disconnect' option on each interface individually and remove it from the access-ports group.
+
+----
+# load replace terminal
+[Type ^D at a new line to end input]
+protocols {
+    dot1x {
+        authenticator {
+            authentication-profile-name packetfence;
+            interface {
+                ge-0/0/1.0 {
+                    mac-radius{
+                        flap-on-disconnect;
+                    }
+                }
+                 ge-0/0/2.0 {
+                    mac-radius{
+                        flap-on-disconnect;
+                    }
+                }
+                .....
+
+                access-ports {
+                    supplicant multiple;
+                    mac-radius {
+                        restrict; 
+                    }
+                }
+            }
+        }
+    }
+}
+Ctrl-D
+# commit comment "configured for floating devices"
 ----
 
 LG-Ericsson
@@ -2748,29 +2862,25 @@ In the guided configuration you now be able to select your new SSID, the Portal 
 Anyfi
 ~~~~~
 
-In this section, we cover the basic configuration of the Anyfi gateway to create a hotspot SSID available on all access points.
+In this section, we cover the basic configuration of the Anyfi Gateway to create a hotspot SSID available on all access points.
 
-This does not cover the configuration of the controller.
+This does not cover the configuration of other Anyfi network elements such as the Controller. Please refer to http://www.anyfinetworks.com/resources[Anyfi Networks' website] for relevant documentation.
 
-In this configuration eth0 will be the management interface of the Anyfi gateway and eth1 will be the interface that will bridge the tagged packets to your network.
+In this configuration eth0 will be the management interface of the Anyfi Gateway and eth1 will be the interface that will bridge the tagged packets to your network.
 
 Interfaces configuration
 ++++++++++++++++++++++++
 
   interfaces {
       bridge br0 {
-          aging 300
-          hello-time 2
-          max-age 20
-          priority 0
-          stp false
+          ...
       }
       ethernet eth0 {
           description "Management network"
           address 192.168.0.20/24
       }
       ethernet eth1 {
-          description "Bridge to network"
+          description "Wi-Fi client traffic" 
           bridge-group {
               bridge br0
           }
@@ -2801,7 +2911,7 @@ SSID configuration
                   }
               }
               bridge br0
-              controller <the controller's ip address>
+              controller <Anyfi Controller's IP or FQDN>
               isolation
               nas {
                   identifier anyfi
@@ -2816,10 +2926,6 @@ SSID configuration
 ^^^^^^
 
 This section will allow you to configure the 'Anyfi-Secure' SSID that will authenticate users using 802.1X.
-
-Note that for the moment, the Anyfi gateway doesn't support RADIUS assigned VLANs when using 802.1X. The devices will be assigned the native VLAN on eth1.
-PacketFence will only do the authentication of the 802.1X credentials and accept or deny the user.
-Since the 802.1X users cannot be assigned a VLAN, if you want portal based authentication on top of the 802.1X authentication, you will need to use the inline mode on the network your devices will be in.
 
 SSID configuration
 ++++++++++++++++++
@@ -2841,13 +2947,13 @@ SSID configuration
                   }
               }
               bridge br0
-              controller <the controller's ip address> 
+              controller <Anyfi Controller's IP or FQDN>
               isolation
               nas {
                   identifier anyfi
                   port 3799
               }
-              ssid agile-super-secure
+              ssid Anyfi-Secure
               wpa2 {
               }
           }

@@ -42,11 +42,13 @@ use Time::Local;
 use DateTime;
 use pf::factory::profile::filter;
 use pf::profile::filter;
+use pf::profile::filter::all;
+use pf::constants::Portal::Profile;
 
 # Categorized by feature, pay attention when modifying
 our (
     @listen_ints, @dhcplistener_ints, @ha_ints, $monitor_int,
-    @internal_nets, @routed_isolation_nets, @routed_registration_nets, @inline_nets, @external_nets,
+    @internal_nets, @routed_isolation_nets, @routed_registration_nets, @inline_nets,
     @inline_enforcement_nets, @vlan_enforcement_nets, $management_network,
 #pf.conf.default variables
     %Default_Config, $cached_pf_default_config,
@@ -70,7 +72,8 @@ our (
     %mark_type_to_str, %mark_type,
     $thread, $default_pid, $fqdn,
     %CAPTIVE_PORTAL,
-
+#realm.conf
+    %ConfigRealm, $cached_realm,
 );
 
 BEGIN {
@@ -80,7 +83,7 @@ BEGIN {
     # Categorized by feature, pay attention when modifying
     @EXPORT = qw(
         @listen_ints @dhcplistener_ints @ha_ints $monitor_int
-        @internal_nets @routed_isolation_nets @routed_registration_nets @inline_nets $management_network @external_nets
+        @internal_nets @routed_isolation_nets @routed_registration_nets @inline_nets $management_network
         @inline_enforcement_nets @vlan_enforcement_nets
         $IPTABLES_MARK_UNREG $IPTABLES_MARK_REG $IPTABLES_MARK_ISOLATION
         $IPSET_VERSION %mark_type_to_str %mark_type
@@ -89,8 +92,9 @@ BEGIN {
         %Config
         %ConfigNetworks %ConfigOAuth
         %ConfigFloatingDevices
-        $TRIGGER_TYPE_ACCOUNTING $TRIGGER_TYPE_DETECT $TRIGGER_TYPE_INTERNAL $TRIGGER_TYPE_MAC $TRIGGER_TYPE_NESSUS $TRIGGER_TYPE_OPENVAS $TRIGGER_TYPE_OS $TRIGGER_TYPE_SOH $TRIGGER_TYPE_USERAGENT $TRIGGER_TYPE_VENDORMAC @VALID_TRIGGER_TYPES
+        $TRIGGER_TYPE_ACCOUNTING $TRIGGER_TYPE_DETECT $TRIGGER_TYPE_INTERNAL $TRIGGER_TYPE_MAC $TRIGGER_TYPE_NESSUS $TRIGGER_TYPE_OPENVAS $TRIGGER_TYPE_OS $TRIGGER_TYPE_SOH $TRIGGER_TYPE_USERAGENT $TRIGGER_TYPE_VENDORMAC $TRIGGER_TYPE_PROVISIONER @VALID_TRIGGER_TYPES
         $ACCOUNTING_POLICY_TIME $ACCOUNTING_POLICY_BANDWIDTH
+        $TRIGGER_ID_PROVISIONER
         $WIPS_VID $thread $default_pid $fqdn
         $FALSE $TRUE $YES $NO
         $IF_INTERNAL $IF_ENFORCEMENT_VLAN $IF_ENFORCEMENT_INLINE
@@ -103,7 +107,7 @@ BEGIN {
         %connection_group %connection_group_to_str
         $RADIUS_API_LEVEL $VLAN_API_LEVEL $INLINE_API_LEVEL $AUTHENTICATION_API_LEVEL $SOH_API_LEVEL $BILLING_API_LEVEL
         $ROLE_API_LEVEL
-        $SELFREG_MODE_EMAIL $SELFREG_MODE_SMS $SELFREG_MODE_SPONSOR $SELFREG_MODE_GOOGLE $SELFREG_MODE_FACEBOOK $SELFREG_MODE_GITHUB $SELFREG_MODE_LINKEDIN $SELFREG_MODE_WIN_LIVE $SELFREG_MODE_NULL
+        $SELFREG_MODE_EMAIL $SELFREG_MODE_SMS $SELFREG_MODE_SPONSOR $SELFREG_MODE_GOOGLE $SELFREG_MODE_FACEBOOK $SELFREG_MODE_GITHUB $SELFREG_MODE_LINKEDIN $SELFREG_MODE_WIN_LIVE $SELFREG_MODE_NULL $SELFREG_MODE_CHAINED
         %CAPTIVE_PORTAL
         $HTTP $HTTPS
         normalize_time $TIME_MODIFIER_RE $ACCT_TIME_MODIFIER_RE $DEADLINE_UNIT access_duration
@@ -118,6 +122,7 @@ BEGIN {
         $cached_pf_default_config $cached_pf_doc_config @stored_config_files
         $OS
         %Doc_Config
+        %ConfigRealm $cached_realm
     );
 }
 
@@ -149,6 +154,8 @@ Readonly::Scalar our $TRIGGER_TYPE_OS => 'os';
 Readonly::Scalar our $TRIGGER_TYPE_SOH => 'soh';
 Readonly::Scalar our $TRIGGER_TYPE_USERAGENT => 'useragent';
 Readonly::Scalar our $TRIGGER_TYPE_VENDORMAC => 'vendormac';
+Readonly::Scalar our $TRIGGER_TYPE_PROVISIONER => 'provisioner';
+Readonly::Scalar our $TRIGGER_ID_PROVISIONER => 'check';
 
 Readonly our @VALID_TRIGGER_TYPES =>
   (
@@ -161,7 +168,8 @@ Readonly our @VALID_TRIGGER_TYPES =>
    $TRIGGER_TYPE_OS,
    $TRIGGER_TYPE_SOH,
    $TRIGGER_TYPE_USERAGENT,
-   $TRIGGER_TYPE_VENDORMAC
+   $TRIGGER_TYPE_VENDORMAC,
+   $TRIGGER_TYPE_PROVISIONER,
   );
 
 # Accounting trigger policies
@@ -324,6 +332,7 @@ Readonly our $SELFREG_MODE_GITHUB => 'github';
 Readonly our $SELFREG_MODE_LINKEDIN   => 'linkedin';
 Readonly our $SELFREG_MODE_WIN_LIVE   => 'windowslive';
 Readonly our $SELFREG_MODE_NULL   => 'null';
+Readonly our $SELFREG_MODE_CHAINED   => 'chained';
 
 # SoH filters
 Readonly our $SOH_ACTION_ACCEPT => 'accept';
@@ -414,6 +423,7 @@ sub init_config {
     readNetworkConfigFile();
     readFloatingNetworkDeviceFile();
     readFirewallSSOFile();
+    readRealmFile();
 }
 
 =item ipset_version -  check the ipset version on the system
@@ -545,7 +555,7 @@ sub readPfConfigFiles {
                 #clearing older interfaces infor
                 $monitor_int = $management_network = '';
                 @listen_ints = @dhcplistener_ints = @ha_ints =
-                  @internal_nets = @external_nets =
+                  @internal_nets =
                   @inline_enforcement_nets = @vlan_enforcement_nets = ();
 
                 my @time_values = grep { my $t = $Doc_Config{$_}{type}; defined $t && $t eq 'time' } keys %Doc_Config;
@@ -592,7 +602,7 @@ sub readPfConfigFiles {
                     }
 
                     die "Missing mandatory element ip or netmask on interface $int"
-                        if ($type =~ /internal|managed|management|external/ && !defined($int_obj));
+                        if ($type =~ /internal|managed|management/ && !defined($int_obj));
 
                     foreach my $type ( split( /\s*,\s*/, $type ) ) {
                         if ( $type eq 'internal' ) {
@@ -613,8 +623,6 @@ sub readPfConfigFiles {
                             # adding management to dhcp listeners by default (if it's not already there)
                             push @dhcplistener_ints, $int if ( not scalar grep({ $_ eq $int } @dhcplistener_ints) );
 
-                        } elsif ( $type eq 'external' ) {
-                            push @external_nets, $int_obj;
                         } elsif ( $type eq 'monitor' ) {
                             $monitor_int = $int;
                         } elsif ( $type =~ /^dhcp-?listener$/i ) {
@@ -634,7 +642,7 @@ sub readPfConfigFiles {
                             crl.usertrust.com ocsp.usertrust.com mscrl.microsoft.com crl.microsoft.com
                             ocsp.apple.com ocsp.digicert.com ocsp.entrust.com srvintl-crl.verisign.com
                             ocsp.verisign.com ctldl.windowsupdate.com crl.globalsign.net pki.google.com
-                            www.microsoft.com crl.godaddy.com ocsp.godaddy.com
+                            www.microsoft.com crl.godaddy.com ocsp.godaddy.com certificates.godaddy.com
                         )
                     ];
                 } else {
@@ -645,10 +653,11 @@ sub readPfConfigFiles {
                             crl.usertrust.com ocsp.usertrust.com mscrl.microsoft.com crl.microsoft.com
                             ocsp.apple.com ocsp.digicert.com ocsp.entrust.com srvintl-crl.verisign.com
                             ocsp.verisign.com ctldl.windowsupdate.com crl.globalsign.net pki.google.com
-                            www.microsoft.com crl.godaddy.com ocsp.godaddy.com
+                            www.microsoft.com crl.godaddy.com ocsp.godaddy.com certificates.godaddy.com
                         )
                     ];
                 }
+                $Config{network}{dhcp_filter_by_message_types} = [split(/\s*,\s*/,$Config{network}{dhcp_filter_by_message_types} || '')],
 
                 _load_captive_portal();
             }]
@@ -675,14 +684,25 @@ sub readProfileConfigFile {
                 #Clearing the Profile filters
                 @Profile_Filters = ();
                 my $default_description = $Profiles_Config{'default'}{'description'};
-                while (my ($profile_id, $profile) = each %Profiles_Config) {
+                foreach my $profile_id ($config->Sections()) {
+                    my $profile = $Profiles_Config{$profile_id};
                     $profile->{'description'} = '' if $profile_id ne 'default' && $profile->{'description'} eq $default_description;
-                    foreach my $field (qw(locale mandatory_fields sources filter) ) {
+                    foreach my $field (qw(locale mandatory_fields sources filter provisioners) ) {
                         $profile->{$field} = [split(/\s*,\s*/, $profile->{$field} || '')];
                     }
-                    #Adding filters in profile order
-                    foreach my $filter (@{$profile->{'filter'}}) {
-                        push @Profile_Filters, pf::factory::profile::filter->instantiate($profile_id,$filter);
+                    $profile->{block_interval} = normalize_time($profile->{block_interval}
+                          || $pf::constants::Portal::Profile::BLOCK_INTERVAL_DEFAULT_VALUE);
+                    my $filters = $profile->{'filter'};
+                    if($profile_id ne 'default' && @$filters) {
+                        my @filterObjects;
+                        foreach my $filter (@{$profile->{'filter'}}) {
+                            push @filterObjects, pf::factory::profile::filter->instantiate($profile_id,$filter);
+                        }
+                        if(defined ($profile->{filter_match_style}) && $profile->{filter_match_style} eq 'all') {
+                            push @Profile_Filters, pf::profile::filter::all->new(profile => $profile_id, value => \@filterObjects);
+                        } else {
+                            push @Profile_Filters,@filterObjects;
+                        }
                     }
                 }
                 #Add the default filter so it always matches if no other filter matches
@@ -777,6 +797,24 @@ sub readFirewallSSOFile {
     }
 }
 
+=item readRealmFile - realm.conf
+
+=cut
+
+sub readRealmFile {
+    $cached_realm = pf::config::cached->new(
+        -file => $realm_config_file,
+        -allowempty => 1,
+        -onreload => [ reload_realm_config => sub {
+            my ($config) = @_;
+            $config->toHash(\%ConfigRealm);
+        }]
+    );
+    if(@Config::IniFiles::errors) {
+        $logger->logcroak( join( "\n", @Config::IniFiles::errors ) );
+    }
+}
+
 =item normalize_time - formats date
 
 Returns the number of seconds represented by the time period.
@@ -863,23 +901,39 @@ sub dynamic_unreg_date {
     my $current_date = time;
     my $unreg_date;
 
+    unless(defined($trigger)){
+        $logger->warn("Trying to compute the unreg date from an undefined value. Stopping processing and making unreg date undefined.");
+        return $trigger;
+    }
+
+    if($trigger =~ /0000-00-00/){
+        $logger->debug("Stopping dynamic unreg date handling because unreg date is set to infinite : $trigger");
+        return $trigger;
+    }
+
     my ($year,$month,$day) = $trigger =~ /(\d{1,4})?-?(\d{2})-(\d{2})/;
     my $current_year = POSIX::strftime("%Y",localtime($current_date));
 
     if ( !defined $year || $year == 0 || $year < $current_year ) {
-            $year = $current_year;
-            $trigger = "$year-$month-$day";
-            $logger->warn("The year was past, null or undefined. We used current year");
+        $year = $current_year;
+        $trigger = "$year-$month-$day";
+        $logger->warn("The year was past, null or undefined. We used current year");
     }
 
-    my $time_zone = DateTime::TimeZone->new( name => 'local' );
-    if (DateTime->new(year => $year, month => $month, day => $day, time_zone => $time_zone )->epoch <= DateTime->now(time_zone => $time_zone)->epoch) {
-        $logger->warn("The DAY is today or before today. Setting date to next year");
-        $year += 1;
-        $unreg_date = "$year-$month-$day";
-    } else {
-        $unreg_date = "$year-$month-$day";
-    }
+    try {
+        my $time_zone = DateTime::TimeZone->new( name => 'local' );
+        if (DateTime->new(year => $year, month => $month, day => $day, time_zone => $time_zone )->epoch <= DateTime->now(time_zone => $time_zone)->epoch) {
+            $logger->warn("The DAY is today or before today. Setting date to next year");
+            $year += 1;
+            $unreg_date = "$year-$month-$day";
+        } else {
+            $unreg_date = "$year-$month-$day";
+        }
+    } catch {
+        $logger->error("Couldn't compute unregistration date from value '$trigger'. Unregistration date will be undefined.");
+        $unreg_date = undef; 
+    };
+
     return $unreg_date;
 }
 
@@ -1246,7 +1300,7 @@ Minor parts of this file may have been contributed. See CREDITS.
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 Copyright (C) 2005 Kevin Amorin
 

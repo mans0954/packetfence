@@ -17,6 +17,10 @@ use diagnostics;
 use Test::More tests => 10;
 
 use lib '/usr/local/pf/lib';
+BEGIN {
+    use lib qw(/usr/local/pf/t);
+    use PfFilePaths;
+}
 use English qw( -no_match_vars );
 use File::Basename qw(basename);
 use Log::Log4perl;
@@ -85,7 +89,7 @@ Inverse inc. <info@inverse.ca>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
     

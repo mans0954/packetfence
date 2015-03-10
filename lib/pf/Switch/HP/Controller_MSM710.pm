@@ -28,7 +28,7 @@ use warnings;
 use Log::Log4perl;
 use POSIX;
 
-use base ('pf::Switch::HP');
+use base ('pf::Switch');
 
 use pf::config;
 sub description { 'HP ProCurve MSM710 Mobility Controller' }
@@ -250,7 +250,7 @@ Inverse inc. <info@inverse.ca>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

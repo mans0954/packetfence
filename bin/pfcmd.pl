@@ -1263,12 +1263,17 @@ sub getManagers {
         grep { (!exists $seen{$_->name}) && ($seen{$_->name} = 1) && ( !$justManaged || $_->isManaged ) && !$_->isvirtual }
         map {
             my $m = $_;
-            my @managers =
-                grep { defined $_ }
-                map { pf::services::get_service_manager($_) }
-                @{$m->dependsOnServices}
-                if $includeDependsOn;
-            push @managers,$m;
+            my @managers;
+            if ($includeDependsOn) {
+                push @managers, grep {defined $_}
+                  map {pf::services::get_service_manager($_)} @{$m->dependsOnServices};
+            }
+            if($m->isa("pf::services::manager::submanager")) {
+                push @managers,$m->managers;
+            } else {
+                push @managers,$m;
+            }
+
             @managers
         }
         grep { defined $_ }
@@ -1317,7 +1322,6 @@ sub stopService {
 sub restartService {
     my ($service,@services) = @_;
     stopService(@_);
-    configreload('hard') if $service eq 'pf';
     local $SERVICE_HEADER = '';
     startService(@_);
 }
@@ -2433,11 +2437,12 @@ sub field_order {
 sub fixpermissions {
     my $pfcmd = "${bin_dir}/pfcmd";
     my @extra_var_dirs = map { catfile($var_dir,$_) } qw(run cache conf sessions);
-    _changeFilesToOwner('pf',@log_files, @stored_config_files, $install_dir, $bin_dir, $conf_dir, $var_dir, $lib_dir, $log_dir, $generated_conf_dir, $tt_compile_cache_dir, @extra_var_dirs);
+    _changeFilesToOwner('pf',@log_files, @stored_config_files, $install_dir, $bin_dir, $conf_dir, $var_dir, $lib_dir, $log_dir, $generated_conf_dir, $tt_compile_cache_dir, $pfconfig_cache_dir, @extra_var_dirs);
     _changeFilesToOwner('root',$pfcmd);
     chmod(06755,$pfcmd);
     chmod(0664, @stored_config_files);
-    chmod(02775, $conf_dir, $var_dir, $log_dir, $generated_conf_dir,$install_dir, @extra_var_dirs);
+    chmod(02775, $conf_dir, $var_dir, $log_dir, $generated_conf_dir,$install_dir, $pfconfig_cache_dir, @extra_var_dirs);
+    chmod(02770, $pfconfig_cache_dir);
     return 0;
 }
 
@@ -2450,6 +2455,7 @@ sub _changeFilesToOwner {
 sub configreload {
     my ($type)  = @_;
     $type = 'soft' unless defined $type;
+    $logger->trace("configreload $type");
     my $force = $type eq 'hard' ? 1 : 0;
     require pf::violation_config;
     require pf::authentication;
@@ -2458,7 +2464,7 @@ sub configreload {
     require pf::ConfigStore::Authentication;
     require pf::ConfigStore::FloatingDevice;
     require pf::ConfigStore::Interface;
-    require pf::ConfigStore::Mdm;
+    require pf::ConfigStore::Provisioning;
     require pf::ConfigStore::Network;
     require pf::ConfigStore::Pf;
     require pf::ConfigStore::Profile;
@@ -2469,6 +2475,9 @@ sub configreload {
     require pf::vlan::filter;
     pf::config::cached::updateCacheControl();
     pf::config::cached::ReloadConfigs($force);
+    require pfconfig::manager;
+    my $manager = pfconfig::manager->new;
+    $manager->expire_all;
     return 0;
 }
 
@@ -2514,7 +2523,7 @@ Minor parts of this file may have been contributed. See CREDITS.
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 Copyright (C) 2005 Kevin Amorin
 

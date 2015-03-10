@@ -44,11 +44,10 @@ sub update {
     return ($STATUS::OK, "The sources order was successfully saved.");
 }
 
-=back
 
 =head1 COPYRIGHT
 
-Copyright (C) 2012 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

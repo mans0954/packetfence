@@ -38,7 +38,7 @@ BEGIN {
     use Exporter ();
     our ( @ISA, @EXPORT );
     @ISA    = qw(Exporter);
-    @EXPORT = qw(db_data db_connect db_disconnect get_db_handle db_query_execute db_ping);
+    @EXPORT = qw(db_data db_connect db_disconnect get_db_handle db_query_execute db_ping db_cancel_current_query db_now);
 
 }
 
@@ -279,8 +279,8 @@ sub db_query_execute {
         }
 
         my $valid_statement = (defined($db_statement) && (ref($db_statement) eq 'DBI::st'));
-        $logger->trace('SQL statement ('.$query. '): '.$db_statement->{Statement}) if ($valid_statement);
-        $logger->trace('SQL params ('.$query. '): '.join(', ', map { defined $_? $_ : '<null>' } @params)) if (@params);
+        $logger->trace( sub { "SQL statement ($query): " . $db_statement->{Statement} } ) if ($valid_statement);
+        $logger->trace( sub { "SQL params ($query): " . join(', ', map { defined $_ ? $_ : '<null>' } @params) } ) if (@params);
 
         if ($valid_statement && $db_statement->execute(@params)) {
 
@@ -290,18 +290,23 @@ sub db_query_execute {
         } else {
 
             # is it a DBI error?
-            if (defined($DBI::errstr) && defined($DBI::err)) {
-                if (int($DBI::err) == 1062) {
-                    # Duplicate entry -- don't retry
-                    $logger->info("database query failed with: $DBI::errstr (errno: $DBI::err)");
+            my $dbi_err = $dbh->err;
+            if (defined($dbi_err)) {
+                $dbi_err = int($dbi_err);
+                my $dbi_errstr = $dbh->errstr;
+                if ($dbi_err == 1062 || $dbi_err == 1317) {
+
+                    # Duplicate entry (1062) or query interrupted (1317)  -- don't retry
+                    $logger->info("database query failed with: $dbi_errstr (errno: $dbi_err)");
                     $done = 1;
                 }
                 else {
-                    $logger->warn("database query failed with: $DBI::errstr (errno: $DBI::err), will try again");
+                    $logger->warn("database query failed with: $dbi_errstr (errno: $dbi_err), will try again");
                 }
-            } else {
-                $logger->warn("database query failed because statement handler was undefined or invalid, "
-                    ."will try again");
+            }
+            else {
+                $logger->warn(
+                    "database query failed because statement handler was undefined or invalid, " . "will try again");
             }
 
             # this forces real reconnection by invalidating last_connect timer for this thread
@@ -327,6 +332,38 @@ sub db_query_execute {
     }
 }
 
+our $PREPARED_NOW_STMT;
+
+=item db_now
+
+Get the current timestamp of the mysql query
+
+=cut
+
+sub db_now {
+    my $dbh = get_db_handle();
+    $PREPARED_NOW_STMT = $dbh->prepare("SELECT NOW();") unless $PREPARED_NOW_STMT;
+    return unless $PREPARED_NOW_STMT->execute();
+    my $row = $PREPARED_NOW_STMT->fetch;
+    $PREPARED_NOW_STMT->finish;
+    return unless $row;
+    return $row->[0];
+}
+
+=item * db_cancel_current_query
+
+Cancels the current query
+
+=cut
+
+sub db_cancel_current_query {
+    if($DBH) {
+        my $dbh_clone = $DBH->clone;
+        $dbh_clone->do("KILL QUERY ". $DBH->{"mysql_thread_id"} . ";");
+        $dbh_clone->disconnect();
+    }
+}
+
 =back
 
 =head1 AUTHOR
@@ -337,7 +374,7 @@ Minor parts of this file may have been contributed. See CREDITS.
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 Copyright (C) 2005 Kevin Amorin
 

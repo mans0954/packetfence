@@ -31,13 +31,12 @@ sub description { 'Huawei S5710' }
 
 =head1 SUBROUTINES
 
-=over
-
 =cut
+
 sub supportsWiredMacAuth { return $TRUE; }
 sub supportsWiredDot1x { return $TRUE; }
 
-=item getIfType
+=head2 getIfType
 
 Returning ETHERNET type since there is no standard way to get the ifindex
 
@@ -45,7 +44,7 @@ Returning ETHERNET type since there is no standard way to get the ifindex
 
 sub getIfType{ return $SNMP::ETHERNET_CSMACD; }
 
-=item handleReAssignVlanTrapForWiredMacAuth
+=head2 handleReAssignVlanTrapForWiredMacAuth
 
 Called when a ReAssignVlan trap is received for a switch-port in Wired MAC Authentication.
 
@@ -58,15 +57,13 @@ sub handleReAssignVlanTrapForWiredMacAuth {
     $this->deauthenticateMacRadius($mac);
 }
 
-=back
-
 =head1 AUTHOR
 
 Inverse inc. <info@inverse.ca>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2014 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

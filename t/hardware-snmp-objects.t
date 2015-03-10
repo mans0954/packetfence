@@ -16,7 +16,10 @@ use diagnostics;
 
 use lib '/usr/local/pf/lib';
 my $lib_path = '/usr/local/pf/lib';
-use lib qw(/usr/local/pf/t);
+BEGIN {
+    use lib qw(/usr/local/pf/t);
+    use PfFilePaths;
+}
 use Test::More;
 use Test::NoWarnings;
 
@@ -51,7 +54,9 @@ my @whitelist = (
     'disableIfLinkUpDownTraps', 'enableIfLinkUpDownTraps', 'connectWrite', 'connectWriteToController',
     'disconnectWrite', 'disconnectWriteToController', 'getDeauthSnmpConnectionKey', '_NasPortToIfIndex',
     'radiusDisconnect', 'supportsRoleBasedEnforcement', 'getRoleByName', 'returnRadiusAccessAccept',
-    'synchronize_locationlog', 'extractVLAN'
+    'synchronize_locationlog', 'extractVLAN', 
+    'supportsMABFloatingDevices', 'disableMABFloatingDevice', 'enableMABFloatingDevice', 'disableMABByIfIndex', 'enableMABByIfIndex',
+    'identifyConnectionType'
 );
 
 my @missing_subs;
@@ -84,7 +89,7 @@ Inverse inc. <info@inverse.ca>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

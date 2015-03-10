@@ -339,7 +339,7 @@ sub person_modify {
     }
 
     db_query_execute(PERSON, $person_statements, 'person_modify_sql', @{$existing}{@FIELDS}, $pid) || return (0);
-    $logger->info("person $pid modified to $new_pid");
+    $logger->info("person $pid modified to $new_pid") if ($pid ne $new_pid);
     return (1);
 }
 
@@ -363,7 +363,7 @@ Minor parts of this file may have been contributed. See CREDITS.
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 Copyright (C) 2005 Kevin Amorin
 

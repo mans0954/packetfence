@@ -5,6 +5,10 @@ use warnings;
 use diagnostics;
 
 use lib '/usr/local/pf/lib';
+BEGIN {
+    use lib qw(/usr/local/pf/t);
+    use PfFilePaths;
+}
 use Test::More tests => 2;
 use Test::NoWarnings;
 
@@ -26,7 +30,7 @@ Inverse inc. <info@inverse.ca>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
     

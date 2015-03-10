@@ -8,33 +8,15 @@ Catalyst 2960 with http redirect
 
 Developped and tested on IOS 15.0(2)SE5
 
-=over
+=head1 SUPPORTS
 
-=item Supports
-
-=over
-
-=item Deauthentication with RADIUS Disconnect (RFC3576)
-
-=back
-
-=back
+=head2 Deauthentication with RADIUS Disconnect (RFC3576)
 
 =head1 BUGS AND LIMITATIONS
 
-=over
-
-=item Version specific issues
-
-=over
-
-=back
+=head2 Version specific issues
 
 =head1 SEE ALSO
-
-=over
-
-=back
 
 =cut
 
@@ -63,8 +45,6 @@ sub description { 'Cisco Catalyst 2960 with Web Auth' }
 
 =head1 SUBROUTINES
 
-=over
-
 =cut
 
 # CAPABILITIES
@@ -78,7 +58,7 @@ sub supportsWiredMacAuth { return $TRUE; }
 # inline capabilities
 sub inlineCapabilities { return ($MAC,$SSID); }
 
-=item handleReAssignVlanTrapForWiredMacAuth
+=head2 handleReAssignVlanTrapForWiredMacAuth
 
 Called when a ReAssignVlan trap is received for a switch-port in Wired MAC Authentication.
 
@@ -91,7 +71,7 @@ sub handleReAssignVlanTrapForWiredMacAuth {
     $this->radiusDisconnect($mac);
 }
 
-=item parseUrl
+=head2 parseUrl
 
 This is called when we receive a http request from the device and return specific attributes:
 
@@ -110,7 +90,7 @@ sub parseUrl {
     return ($$req->param('client_mac'),$$req->param('wlan'),$$req->param('client_ip'),$$req->param('redirect'),$$req->param('switch_url'),$$req->param('statusCode'));
 }
 
-=item returnRoleAttribute
+=head2 returnRoleAttribute
 
 What RADIUS Attribute (usually VSA) should the role returned into.
 
@@ -122,7 +102,7 @@ sub returnRoleAttribute {
     return 'Airespace-ACL-Name';
 }
 
-=item returnRadiusAccessAccept
+=head2 returnRadiusAccessAccept
 
 Overide to support the captive portal special RADIUS accept
 
@@ -133,6 +113,19 @@ sub returnRadiusAccessAccept {
     my $logger = Log::Log4perl::get_logger( ref($this) );
 
     my $radius_reply_ref = {};
+
+    # If we're doing 802.1x then instead of doing web auth, we'll do classic VLAN isolation
+    # This allows to have different VLANs for the roles
+    if ($connection_type == $WIRED_802_1X){
+        $radius_reply_ref = {
+            'Tunnel-Medium-Type' => $RADIUS::ETHERNET,
+            'Tunnel-Type' => $RADIUS::VLAN,
+            'Tunnel-Private-Group-ID' => $vlan,
+        };
+
+        return [$RADIUS::RLM_MODULE_OK, %$radius_reply_ref];
+    }
+
     # TODO this is experimental
     try {
 
@@ -151,7 +144,7 @@ sub returnRadiusAccessAccept {
                 pf::web::util::session(\%session_id,undef,6);
                 $session_id{client_mac} = $mac;
                 $session_id{wlan} = $ssid;
-                $session_id{switch} = \$this;
+                $session_id{switch_id} = $this->{_id};
                 $radius_reply_ref = {
                     'User-Name' => $mac,
                     'Cisco-AVPair' => ["url-redirect-acl=$role","url-redirect=".$this->{'_portalURL'}."/cep$session_id{_session_id}"],
@@ -191,7 +184,7 @@ sub returnRadiusAccessAccept {
     return [$RADIUS::RLM_MODULE_OK, %$radius_reply_ref];
 }
 
-=item radiusDisconnect
+=head2 radiusDisconnect
 
 Sends a RADIUS Disconnect-Request to the NAS with the MAC as the Calling-Station-Id to disconnect.
 
@@ -290,32 +283,21 @@ sub radiusDisconnect {
 }
 
 
-=item parseRequest
+=head2 parseRequest
 
-Takes FreeRADIUS' RAD_REQUEST hash and process it to return
-NAS Port type (Ethernet, Wireless, etc.)
-Network Device IP
-EAP
-MAC
-NAS-Port (port)
-User-Name
+Redefinition of pf::Switch::parseRequest due to specific attribute being used for webauth
 
 =cut
 
 sub parseRequest {
-    my ($this, $radius_request) = @_;
-    my $client_mac = clean_mac($radius_request->{'Calling-Station-Id'});
-    my $user_name = $radius_request->{'User-Name'};
-    my $nas_port_type = $radius_request->{'NAS-Port-Type'};
-    my $port = $radius_request->{'NAS-Port'};
-    my $eap_type = 0;
-    if (exists($radius_request->{'EAP-Type'})) {
-        $eap_type = $radius_request->{'EAP-Type'};
-    }
-    my $nas_port_id;
-    if (defined($radius_request->{'NAS-Port-Id'})) {
-        $nas_port_id = $radius_request->{'NAS-Port-Id'};
-    }
+    my ( $this, $radius_request ) = @_;
+    my $client_mac      = clean_mac($radius_request->{'Calling-Station-Id'});
+    my $user_name       = $radius_request->{'TLS-Client-Cert-Common-Name'} || $radius_request->{'User-Name'};
+    my $nas_port_type   = $radius_request->{'NAS-Port-Type'};
+    my $port            = $radius_request->{'NAS-Port'};
+    my $eap_type        = ( exists($radius_request->{'EAP-Type'}) ? $radius_request->{'EAP-Type'} : 0 );
+    my $nas_port_id     = ( defined($radius_request->{'NAS-Port-Id'}) ? $radius_request->{'NAS-Port-Id'} : undef );
+    
     my $session_id;
     if (defined($radius_request->{'Cisco-AVPair'})) {
         if ($radius_request->{'Cisco-AVPair'} =~ /audit-session-id=(.*)/ig ) {
@@ -326,15 +308,13 @@ sub parseRequest {
 }
 
 
-=back
-
 =head1 AUTHOR
 
 Inverse inc. <info@inverse.ca>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2014 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

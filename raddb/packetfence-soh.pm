@@ -45,7 +45,7 @@ use constant RPC_PROTO_KEY  => 'PacketFence-RPC-Proto';
 use constant RPC_USER_KEY   => 'PacketFence-RPC-User';
 use constant RPC_PASS_KEY   => 'PacketFence-RPC-Pass';
 use constant DEFAULT_RPC_SERVER => '127.0.0.1';
-use constant DEFAULT_RPC_PORT   => '9090';
+use constant DEFAULT_RPC_PORT   => '7070';
 use constant DEFAULT_RPC_PROTO  => 'http';
 use constant DEFAULT_RPC_USER   => undef;
 use constant DEFAULT_RPC_PASS   => undef;
@@ -129,7 +129,7 @@ L<http://wiki.freeradius.org/Rlm_perl>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2011-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

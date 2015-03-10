@@ -41,7 +41,7 @@ BEGIN {
         isenabled isdisabled isempty
         getlocalmac
         get_all_internal_ips get_internal_nets get_routed_isolation_nets get_routed_registration_nets get_inline_nets
-        get_internal_devs get_internal_devs_phy get_external_devs get_internal_macs
+        get_internal_devs get_internal_devs_phy get_internal_macs
         get_internal_info readpid deletepid
         parse_template mysql_date oui_to_vendor mac2oid oid2mac
         str_to_connection_type connection_type_to_str
@@ -81,7 +81,7 @@ sub valid_date {
         !~ /^\d{4}\-((0[1-9])|(1[0-2]))\-((0[1-9])|([12][0-9])|(3[0-1]))\s+(([01][0-9])|(2[0-3]))(:[0-5][0-9]){2}$/
         )
     {
-        $logger->error("invalid date $date");
+        $logger->warn("invalid date $date");
         return (0);
     } else {
         return (1);
@@ -586,14 +586,6 @@ sub get_internal_devs_phy {
     foreach my $internal (@internal_nets) {
         my $dev = $internal->tag("int");
         push( @devs, $dev ) if ( $dev !~ /:\d+$/ );
-    }
-    return (@devs);
-}
-
-sub get_external_devs {
-    my @devs;
-    foreach my $interface (@external_nets) {
-        push @devs, $interface->tag("int");
     }
     return (@devs);
 }
@@ -1211,7 +1203,7 @@ Minor parts of this file may have been contributed. See CREDITS.
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 Copyright (C) 2005 Kevin Amorin
 

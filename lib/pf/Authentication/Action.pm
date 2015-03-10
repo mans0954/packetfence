@@ -13,15 +13,13 @@ use Moose;
 has 'type' => (isa => 'Str', is => 'rw', required => 1);
 has 'value' => (isa => 'Str', is => 'rw', required => 0);
 
-=back
-
 =head1 AUTHOR
 
 Inverse inc. <info@inverse.ca>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2005-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

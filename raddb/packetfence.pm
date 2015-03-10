@@ -49,7 +49,7 @@ use constant RPC_PROTO_KEY  => 'PacketFence-RPC-Proto';
 use constant RPC_USER_KEY   => 'PacketFence-RPC-User';
 use constant RPC_PASS_KEY   => 'PacketFence-RPC-Pass';
 use constant DEFAULT_RPC_SERVER => '127.0.0.1';
-use constant DEFAULT_RPC_PORT   => '9090';
+use constant DEFAULT_RPC_PORT   => '7070';
 use constant DEFAULT_RPC_PROTO  => 'http';
 use constant DEFAULT_RPC_USER   => undef;
 use constant DEFAULT_RPC_PASS   => undef;
@@ -293,12 +293,15 @@ sub accounting {
 
         # We only perform a RPC call on stop/update types
         unless ($RAD_REQUEST{'Acct-Status-Type'} eq 'Stop' ||
-                $RAD_REQUEST{'Acct-Status-Type'} eq 'Interim-Update') {
+                $RAD_REQUEST{'Acct-Status-Type'} eq 'Interim-Update' ||
+                $RAD_REQUEST{'Acct-Status-Type'} eq 'Start') {
             return $RADIUS::RLM_MODULE_OK;
         }
 
         my $config = _get_rpc_config();
-        my $data = send_rpc_request($config, "radius_accounting", \%RAD_REQUEST);
+        my $data;
+        $data = send_rpc_request($config, "radius_accounting", \%RAD_REQUEST) if ($RAD_REQUEST{'Acct-Status-Type'} eq 'Stop' || $RAD_REQUEST{'Acct-Status-Type'} eq 'Interim-Update');
+        $data = send_rpc_request($config, "radius_update_locationlog", \%RAD_REQUEST) if ($RAD_REQUEST{'Acct-Status-Type'} eq 'Start');
         if ($data) {
             my $elements = $data->[0];
 
@@ -402,7 +405,7 @@ Copyright (C) 2002  The FreeRADIUS server project
 
 Copyright (C) 2002  Boian Jordanov <bjordanov@orbitel.bg>
 
-Copyright (C) 2006-2010, 2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

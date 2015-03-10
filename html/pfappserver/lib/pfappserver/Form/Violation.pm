@@ -148,6 +148,13 @@ has_field 'window' =>
    tags => { after_element => \&help,
              help => 'Amount of time before a violation will be closed automatically. Instead of allowing people to reactivate the network, you may want to open a violation for a defined amount of time instead.' },
   );
+has_field 'delay_by' =>
+  (
+   type => 'Duration',
+   label => 'Delay By',
+   tags => { after_element => \&help,
+             help => "Delay before triggering the violation." },
+  );
 has_field 'template' =>
   (
    type => 'Select',
@@ -337,7 +344,7 @@ sub validate {
 
 =head1 COPYRIGHT
 
-Copyright (C) 2012-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

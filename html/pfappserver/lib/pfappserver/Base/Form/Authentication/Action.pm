@@ -16,6 +16,7 @@ use HTML::FormHandler::Moose;
 extends 'pfappserver::Base::Form';
 
 use HTTP::Status qw(:constants is_success);
+use List::MoreUtils qw(uniq);
 use pf::config;
 use pf::web::util;
 use pf::Authentication::constants;
@@ -49,6 +50,41 @@ has_field 'actions.value' =>
    },
   );
 
+
+our %ACTION_FIELD_OPTIONS = (
+    $Actions::MARK_AS_SPONSOR => {
+        type    => 'Hidden',
+        default => '1'
+    },
+    $Actions::SET_ACCESS_LEVEL => {
+        type          => 'Select',
+        do_label      => 0,
+        wrapper       => 0,
+        multiple      => 1,
+        element_class => ['chzn-select'],
+        element_attr => {'data-placeholder' => 'Click to add a access right'},
+        options_method => \&options_access_level,
+    },
+    $Actions::SET_ROLE => {
+        type           => 'Select',
+        do_label       => 0,
+        wrapper        => 0,
+        options_method => \&options_roles,
+    },
+    $Actions::SET_ACCESS_DURATION => {
+        type           => 'Select',
+        do_label       => 0,
+        wrapper        => 0,
+        options_method => \&options_durations,
+        default_method => sub { $Config{'guests_admin_registration'}{'default_access_duration'} }
+    },
+    $Actions::SET_UNREG_DATE => {
+        type     => 'DatePicker',
+        do_label => 0,
+        wrapper  => 0,
+    }
+);
+
 =head2 field_list
 
 Dynamically build the list of available actions corresponding to the
@@ -67,77 +103,7 @@ sub field_list {
         $self->form->ctx->log->error($@);
     }
     else {
-        @fields = ();
-        $actions_ref = $classname->available_actions();
-        foreach my $action (@{$actions_ref}) {
-            {
-                $action eq $Actions::MARK_AS_SPONSOR && do {
-                    push(@fields,
-                         "${Actions::MARK_AS_SPONSOR}_action" =>
-                          {
-                           type => 'Hidden',
-                           default => '1'
-                          }
-                         );
-                    last;
-                };
-                $action eq $Actions::SET_ACCESS_LEVEL && do {
-                    push(@fields,
-                         "${Actions::SET_ACCESS_LEVEL}_action" =>
-                          {
-                           type => 'Select',
-                           do_label => 0,
-                           wrapper => 0,
-                           multiple => 1,
-                           element_class => ['chzn-select'],
-                           element_attr => {'data-placeholder' => 'Click to add a access right' },
-                           options_method => \&options_access_level,
-                          }
-                         );
-                    last;
-                };
-                $action eq $Actions::SET_ROLE && do {
-                    push(@fields,
-                         "${Actions::SET_ROLE}_action" =>
-                          {
-                           type => 'Select',
-                           do_label => 0,
-                           wrapper => 0,
-                           options_method => \&options_roles,
-                          }
-                         );
-                    last;
-                };
-                $action eq $Actions::SET_ACCESS_DURATION && do {
-                    push(@fields,
-                         "${Actions::SET_ACCESS_DURATION}_action" =>
-                          {
-                           type => 'Select',
-                           do_label => 0,
-                           wrapper => 0,
-                           options_method => \&options_durations,
-                           default_method => sub {
-                               my $duration = $Config{'guests_admin_registration'}{'default_access_duration'}
-                                 || $Default_Config{'guests_admin_registration'}{'default_access_duration'};
-                               return $duration;
-                           },
-                          }
-                         );
-                    last;
-                };
-                $action eq $Actions::SET_UNREG_DATE && do {
-                    push(@fields,
-                         "${Actions::SET_UNREG_DATE}_action" =>
-                          {
-                           type => 'DatePicker',
-                           do_label => 0,
-                           wrapper => 0,
-                          }
-                         );
-                    last;
-                };
-            }
-        }
+        @fields = map { exists $ACTION_FIELD_OPTIONS{$_} ? ( "${_}_action" => $ACTION_FIELD_OPTIONS{$_}) : () } @{$classname->available_actions()};
     }
 
     return \@fields;
@@ -176,9 +142,11 @@ Populate the select field for the 'access level' template action.
 
 sub options_access_level {
     my $self = shift;
-
-    return map { {value => $_, label => $self->_localize($_) } } keys %ADMIN_ROLES;
-
+    my @options_values = $self->form->_get_allowed_options('allowed_access_levels');
+    unless( @options_values ) {
+        @options_values = keys %ADMIN_ROLES;
+    }
+    return map { {value => $_, label => $self->_localize($_) } } @options_values;
 }
 
 =head2 options_roles
@@ -189,16 +157,24 @@ Populate the select field for the roles template action.
 
 sub options_roles {
     my $self = shift;
-
-    my @roles;
-
-    # Build a list of existing roles
-    my ($status, $result) = $self->form->ctx->model('Roles')->list();
-    if (is_success($status)) {
-        @roles = map { $_->{name} => $_->{name} } @$result;
+    my @options_values = $self->form->_get_allowed_options('allowed_roles');
+    unless( @options_values ) {
+        my ($status, $result) = $self->form->ctx->model('Roles')->list();
+        @options_values = map { $_->{name} } @$result if (is_success($status));
     }
+    # Build a list of existing roles
+    return map { { value => $_, label => $_ } } @options_values;
+}
 
-    return @roles;
+=head2 _get_allowed_options
+
+Get the allowed options for the current user based off their role.
+
+=cut
+
+sub _get_allowed_options {
+    my ($self,$option) = @_;
+    return admin_allowed_options([$self->ctx->user->roles],$option);
 }
 
 =head2 options_durations
@@ -210,13 +186,21 @@ in the pf.conf configuration file.
 
 sub options_durations {
     my $self = shift;
-
-    my $choices = $Config{'guests_admin_registration'}{'access_duration_choices'}
-      || $Default_Config{'guests_admin_registration'}{'access_duration_choices'};
-    my $durations = pf::web::util::get_translated_time_hash(
-        [ split (/\s*,\s*/, $choices) ],
-        $self->form->ctx->languages()->[0]
-    );
+    my @options_values = $self->form->_get_allowed_options('allowed_access_durations');
+    my $durations;
+    if(@options_values) {
+        $durations = pf::web::util::get_translated_time_hash(
+            \@options_values,
+            $self->form->ctx->languages()->[0]
+        );
+    } else {
+        my $default_choices = $Config{'guests_admin_registration'}{'access_duration_choices'};
+        my @choices = uniq admin_allowed_options_all([$self->form->ctx->user->roles],'allowed_access_durations'), split (/\s*,\s*/, $default_choices);
+        $durations = pf::web::util::get_translated_time_hash(
+            \@choices,
+            $self->form->ctx->languages()->[0]
+        );
+    }
     my @options = map { $durations->{$_}[0] => $durations->{$_}[1] } sort { $a <=> $b } keys %$durations;
 
     return \@options;
@@ -239,11 +223,14 @@ sub validate {
     if (scalar @duplicates > 0) {
         $self->field('actions')->add_error("You can't have more than one action of the same type.");
     }
+    foreach my $action (@{$self->value->{actions}}) {
+        get_logger->info($action->{type});
+    }
 }
 
 =head1 COPYRIGHT
 
-Copyright (C) 2012-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

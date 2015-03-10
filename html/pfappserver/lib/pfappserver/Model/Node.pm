@@ -341,17 +341,21 @@ sub importCSV {
 
     # Read CSV file
     $count = 0;
+    my $has_pid = exists $index{'pid'};
     if (open (my $import_fh, "<", $tmpfilename)) {
         my $csv = Text::CSV->new({ binary => 1, sep_char => $delimiter });
         while (my $row = $csv->getline($import_fh)) {
             my ($pid, $mac, $node, %data, $result);
 
-            $pid = $row->[$index{'pid'}] || undef if exists $index{'pid'};
-            if ($pid && ($pid !~ /$pf::person::PID_RE/ || !person_exist($pid))) {
-                $logger->debug("Ignored unknown PID ($pid)");
-                $skipped++;
-                next;
+            if($has_pid) {
+                $pid = $row->[$index{'pid'}] || undef;
+                if ( $pid && ($pid !~ /$pf::person::PID_RE/ || !person_exist($pid))) {
+                    $logger->debug("Ignored unknown PID ($pid)");
+                    $skipped++;
+                    next;
+                }
             }
+
             $mac = $row->[$index{'mac'}] || undef;
             if (!$mac || !valid_mac($mac)) {
                 $logger->debug("Ignored invalid MAC ($mac)");
@@ -423,6 +427,23 @@ sub delete {
     return ($status, $status_msg);
 }
 
+=head2 reevaluate
+
+=cut
+
+sub reevaluate {
+    my ($self, $mac) = @_;
+    my $logger = get_logger();
+    my ($status, $status_msg) = ($STATUS::OK);
+
+    unless(reevaluate_access($mac, "node_modify")){
+        $status = $STATUS::INTERNAL_SERVER_ERROR;
+        $status_msg = "The access couldn't be reevaluated.";
+    }
+
+    return ($status, $status_msg);
+}
+
 =head2 availableStatus
 
 =cut
@@ -486,6 +507,18 @@ sub closeViolation {
         return ($STATUS::OK, 'The violation was successfully closed.');
     }
     return ($STATUS::INTERNAL_SERVER_ERROR, 'An error occurred while closing the violation.');
+}
+
+=head2 runViolation
+
+=cut
+
+sub runViolation {
+    my ($self, $id) = @_;
+    if(violation_run_delayed($id)) {
+        return ($STATUS::OK, 'The violation was successfully ran');
+    }
+    return ($STATUS::INTERNAL_SERVER_ERROR, 'An error occurred while running the violation.');
 }
 
 =head2 closeViolations
@@ -736,7 +769,8 @@ sub bulkApplyRole {
     my $count = 0;
     foreach my $mac (@macs) {
         my $node = node_view($mac);
-        if ($node->{category_id} != $role) {
+        my $old_category_id = $node->{category_id};
+        if (!defined($old_category_id) || $old_category_id != $role) {
             # Role has changed
             $node->{category_id} = $role;
             if (node_modify($mac, %{$node})) {
@@ -751,13 +785,28 @@ sub bulkApplyRole {
     return ($STATUS::OK, ["Role was changed for [_1] node(s)", $count]);
 }
 
+=head2 bulkReevaluateAccess
+
+=cut
+
+sub bulkReevaluateAccess {
+    my ($self, @macs) = @_;
+    my $count = 0;
+    foreach my $mac (@macs) {
+        if (reevaluate_access($mac, "node_modify")){
+            $count++;
+        }
+    }
+    return ($STATUS::OK, ["Access was reevaluated for [_1] node(s)", $count]);
+}
+
 =head1 AUTHOR
 
 Inverse inc. <info@inverse.ca>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2013-2014 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

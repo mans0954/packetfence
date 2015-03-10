@@ -19,11 +19,14 @@ use pf::action;
 use pf::admin_roles;
 use pf::Authentication::Source;
 use pf::Authentication::constants;
+use pf::factory::provisioner;
+use pf::factory::firewallsso;
+use pf::factory::profile::filter;
 use pf::Switch::constants;
-use pfappserver::Controller::Graph;
+use pfappserver::PacketFence::Controller::Graph;
 use pfappserver::Model::Node;
 use pfappserver::Form::Config::Wrix;
-use pfappserver::Form::Portal::Common;
+use pfappserver::Form::Config::ProfileCommon;
 use pf::config;
 
 use constant {
@@ -164,7 +167,7 @@ Extract localizable strings from Models and Controllers classes.
 
 sub parse_mc {
     my $base = APP.'/lib/pfappserver/';
-    my @dir = qw/Base Controller Model/;
+    my @dir = qw(Base PacketFence/Controller Model Form);
     my @modules = ();
 
     my $pm = sub {
@@ -181,8 +184,8 @@ sub parse_mc {
         open(PM, $module);
         while (defined($line = <PM>)) {
             chomp $line;
-            if ($line =~ m/\$c->loc\(['"](.+?[^'"\\])["']\)/) {
-                my $string = $1;
+            if ($line =~ m/->(loc|_localize)\(['"]([^\$].+?[^'"\\])["']\)/) {
+                my $string = $2;
                 $string =~ s/\\'/'/g;
                 add_string($string, $module);
             }
@@ -213,8 +216,8 @@ sub parse_forms {
         open(PM, $form);
         while (defined($line = <PM>)) {
             chomp $line;
-            if ($line =~ m/(?:label|required|help) => "(.+?[^\\])["]/ ||
-                $line =~ m/(?:label|required|help) => '(.+?[^\\])[']/) {
+            if ($line =~ m/(?:label|required|help)\s+=>\s+"(.+?[^\\])["]/ ||
+                $line =~ m/(?:label|required|help)\s+=>\s+'(.+?[^\\])[']/) {
                 my $string = $1;
                 $string =~ s/\\'/'/g;
                 add_string($string, $form);
@@ -240,7 +243,7 @@ sub parse_conf {
         $description =~ s/(\S*(&lt;|&gt;)\S*)(?=[\s,\.])/<code>$1<\/code>/g; # enclose strings that contain < or >
         $description =~ s/(\S+\.(html|tt|pm|pl|txt))\b(?!<\/code>)/<code>$1<\/code>/g; # enclose strings that ends with .html, .tt, etc
         $description =~ s/^ \* (.+?)$/<li>$1<\/li>/mg; # create list elements for lines beginning with " * "
-        $description =~ s/(<li>.*<\/li>)/<ul>$1<\/ul>/s; # create lists from preceding substitution 
+        $description =~ s/(<li>.*<\/li>)/<ul>$1<\/ul>/s; # create lists from preceding substitution
         $description =~ s/\"([^\"]+)\"/<i>$1<\/i>/mg; # enclose strings surrounded by double quotes
         $description =~ s/\[(\S+)\]/<strong>$1<\/strong>/mg; # enclose strings surrounded by brakets
         $description =~ s/(https?:\/\/\S+)/<a href="$1">$1<\/a>/g; # make links clickable
@@ -306,11 +309,21 @@ sub extract_modules {
     }
 
     const('pf::config', 'VALID_TRIGGER_TYPES', \@pf::config::VALID_TRIGGER_TYPES);
+    const('pf::config', 'SoH Actions', \@pf::config::SOH_ACTIONS);
+    const('pf::config', 'SoH Classes', \@pf::config::SOH_CLASSES);
+    const('pf::config', 'SoH Status', \@pf::config::SOH_STATUS);
     const('pf::config', 'Inline triggers', [$pf::config::MAC, $pf::config::PORT, $pf::config::SSID, $pf::config::ALWAYS]);
     const('pf::config', 'Network types', [$pf::config::NET_TYPE_VLAN_REG, $pf::config::NET_TYPE_VLAN_ISOL, $pf::config::NET_TYPE_INLINE, 'management', 'other']);
 
     my @values = map { "${_}_action" } @pf::action::VIOLATION_ACTIONS;
     const('pf::action', 'VIOLATION_ACTIONS', \@values);
+
+    @values = ();
+    map {
+        m/^(.+?)(_(READ|CREATE|UPDATE|DELETE))?$/;
+        push(@values, $1) unless (grep /$1/, @values);
+    } @ADMIN_ACTIONS;
+    const('pf::admin_roles', 'Actions groups', \@values);
 
     const('pf::admin_roles', 'Actions', \@ADMIN_ACTIONS);
 
@@ -333,7 +346,9 @@ sub extract_modules {
             encryption => '',
             scope => '',
             path => '',
-            client_id => ''
+            client_id => '',
+            authentication_source => undef,
+            chained_authentication_source => undef
            });
         $attributes = $source->available_attributes();
 
@@ -349,6 +364,15 @@ sub extract_modules {
     @values = map { @$_ } values %Conditions::OPERATORS;
     const('pf::Authentication::constants', 'Conditions', \@values);
 
+    @values = sort grep {$_} map { /^pf::provisioner::(.*)/; $1 } @pf::factory::provisioner::MODULES;
+    const('pf::provisioner', 'Provisioners', \@values);
+
+    @values = sort @pf::factory::profile::filter::MODULES;
+    const('pf::filter', 'Portal Profile Filters', \@values);
+
+    @values = sort grep {$_} map { /^pf::firewallsso::(.*)/; $1 } @pf::factory::firewallsso::MODULES;
+    const('pf::firewallsso', 'Firewall SSO', \@values);
+
     const('pf::Switch::constants', 'Modes', \@SNMP::MODES);
 
     const('pf::pfcmd::report', 'SQL', ['dhcp_fingerprint']);
@@ -357,19 +381,21 @@ sub extract_modules {
     $attributes = pfappserver::Model::Node->availableStatus();
     const('pfappserver::Model::Node', 'availableStatus', $attributes);
 
-    const('pfappserver::Controller::Graph', 'graph type', \@pfappserver::Controller::Graph::GRAPHS);
+    const('pfappserver::PacketFence::Controller::Graph', 'graph type', \@pfappserver::PacketFence::Controller::Graph::GRAPHS);
 
-    const('pfappserver::Controller::Graph', 'os fields', [qw/description count/]);
-    const('pfappserver::Controller::Graph', 'connectiontype fields', [qw/connection_type connections/]);
-    const('pfappserver::Controller::Graph', 'ssid fields', [qw/ssid nodes/]);
-    const('pfappserver::Controller::Graph', 'nodebandwidth fields', [qw/callingstationid/]);
-    const('pfappserver::Controller::Graph', 'osclassbandwidth fields', [qw/dhcp_fingerprint/]);
+    const('pfappserver::PacketFence::Controller::Graph', 'os fields', [qw/description count/]);
+    const('pfappserver::PacketFence::Controller::Graph', 'connectiontype fields', [qw/connection_type connections/]);
+    const('pfappserver::PacketFence::Controller::Graph', 'ssid fields', [qw/ssid nodes/]);
+    const('pfappserver::PacketFence::Controller::Graph', 'nodebandwidth fields', [qw/callingstationid/]);
+    const('pfappserver::PacketFence::Controller::Graph', 'osclassbandwidth fields', [qw/dhcp_fingerprint/]);
 
     const('pfappserver::Form::Config::Wrix', 'open hours', \@pfappserver::Form::Config::Wrix::HOURS);
 
-    @values = pfappserver::Form::Portal::Common->options_mandatory_fields();
+    @values = pfappserver::Form::Config::ProfileCommon->options_mandatory_fields();
     @values = map { $_->{label} } @values;
-    const('pfappserver::Form::Portal::Common', 'mandatory fields', \@values);
+    const('pfappserver::Form::Config::ProfileCommon', 'mandatory fields', \@values);
+
+    const('pfappserver::Form::Field::Duration', 'Operators', ['add', 'subtract']);
 
     const('html/pfappserver/root/user/list_password.tt', 'options', ['mail_loading']);
 }
@@ -392,7 +418,7 @@ sub print_po {
 
     print <<EOT;
 # English translations for $package package.
-# Copyright (C) 2012-2014 Inverse inc.
+# Copyright (C) 2005-2015 Inverse inc.
 # This file is distributed under the same license as the $package package.
 #
 msgid ""
@@ -466,7 +492,7 @@ Inverse inc. <info@inverse.ca>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 

@@ -43,6 +43,8 @@ sub field_list {
             label => $doc_section_name,
           };
         my $type = $doc_section->{type} || "text";
+        #skip if hidden
+        next if $type eq 'hidden';
         {
 
             ($type eq "text" && $doc_section->{description} =~ m/comma[-\s](delimite|separate)/si) && do {
@@ -160,7 +162,7 @@ sub field_list {
 
 =head1 COPYRIGHT
 
-Copyright (C) 2012-2013 Inverse inc.
+Copyright (C) 2005-2015 Inverse inc.
 
 =head1 LICENSE
 
