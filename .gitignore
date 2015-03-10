@@ -4,6 +4,7 @@
 *.local
 *.lockone
 .#*
+.pc/
 
 # Configuration not in git
 conf/admin.conf
