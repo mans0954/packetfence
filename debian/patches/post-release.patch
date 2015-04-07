@@ -1,0 +1,158 @@
+Description: Minor changes to head after release of 4.7.0
+ TODO: Put a short summary on the line above and replace this paragraph
+ with a longer explanation of this change. Complete the meta-information
+ with other relevant fields (see below for details). To make it easier, the
+ information below has been extracted from the changelog. Adjust it or drop
+ it.
+ .
+ packetfence (4.7.0) unstable; urgency=low
+ .
+   * Version 4.7.0
+Author: Inverse <info@inverse.ca>
+
+---
+The information above should follow the Patch Tagging Guidelines, please
+checkout http://dep.debian.net/deps/dep3/ to learn about the format. Here
+are templates for supplementary fields that you might want to add:
+
+Origin: <vendor|upstream|other>, <url of original patch>
+Bug: <url in upstream bugtracker>
+Bug-Debian: https://bugs.debian.org/<bugnumber>
+Bug-Ubuntu: https://launchpad.net/bugs/<bugnumber>
+Forwarded: <no|not-needed|url proving that it has been forwarded>
+Reviewed-By: <name and email of someone who approved the patch>
+Last-Update: <YYYY-MM-DD>
+
+--- packetfence-4.7.0.orig/ChangeLog
++++ packetfence-4.7.0/ChangeLog
+@@ -8650,6 +8650,14 @@ Date:   Wed Oct 22 21:17:24 2014 -0400
+ 
+ M	UPGRADE.asciidoc
+ 
++commit bd6ce442f957968f3d6af1de67a1259c48ba73d0
++Author: James Rouzier <jrouzier@inverse.ca>
++Date:   Wed Oct 22 21:17:24 2014 -0400
++
++    Updated upgrade instructions
++
++M	UPGRADE.asciidoc
++
+ commit 154cc8b6205329dc7c3a2f090c547e3933aae372
+ Author: Julien Semaan <jul.semaan@gmail.com>
+ Date:   Wed Oct 22 17:17:36 2014 -0400
+@@ -12502,6 +12510,34 @@ M	docs/PacketFence_Network_Devices_Confi
+ M	docs/docinfo.xml
+ M	docs/includes/global-attributes.asciidoc
+ 
++commit 73760a983f93ea3cabc4daeaf4b42733aaed6449
++Author: Durand Fabrice <fdurand@inverse.ca>
++Date:   Wed Sep 10 16:32:07 2014 -0400
++
++    Updated ChangeLog file
++
++M	ChangeLog
++
++commit 9d1497ec50870c45ac0d7c77ea88c6bb0d1633cd
++Author: Durand Fabrice <fdurand@inverse.ca>
++Date:   Wed Sep 10 16:29:43 2014 -0400
++
++    Prepare for release
++
++M	NEWS.asciidoc
++M	addons/packages/packetfence.spec
++M	conf/dhcp_fingerprints.conf
++M	conf/pf-release
++M	db/pf-schema-4.4.0.sql
++D	db/pf-schema-4.x.x.sql
++A	db/upgrade-4.3.0-4.4.0.sql
++D	db/upgrade-4.x.x.sql
++M	debian/changelog
++M	docs/PacketFence_Administration_Guide-docinfo.xml
++M	docs/PacketFence_Network_Devices_Configuration_Guide-docinfo.xml
++M	docs/docinfo.xml
++M	docs/includes/global-attributes.asciidoc
++
+ commit c70c93fe5a048ac7b0980c4997b3ad64a0a7142f
+ Author: Durand Fabrice <fdurand@inverse.ca>
+ Date:   Wed Sep 10 16:09:45 2014 -0400
+@@ -16392,6 +16428,14 @@ Date:   Fri Jun 27 07:59:21 2014 -0400
+ 
+ M	html/pfappserver/root/interface/create.tt
+ 
++commit 08cc155416415f348c9ce96ec5b3005c31bd43b7
++Author: Durand Fabrice <fdurand@inverse.ca>
++Date:   Thu Jun 26 14:47:46 2014 -0400
++
++    Fixed PacketFence_Network xml file
++
++M	docs/PacketFence_Network_Devices_Configuration_Guide-docinfo.xml
++
+ commit 86c2ce3c95ad850a0f8f97a99b921ac373959ac3
+ Author: Durand Fabrice <fdurand@inverse.ca>
+ Date:   Thu Jun 26 14:47:46 2014 -0400
+@@ -27521,6 +27565,14 @@ Date:   Wed Feb 5 15:37:03 2014 -0500
+ 
+ M	lib/pf/SNMP/Nortel.pm
+ 
++commit 3dd502d1c3ffe88f25c3a312c16cb184662b630c
++Author: Derek Wuelfrath <dwuelfrath@inverse.ca>
++Date:   Wed Feb 5 14:53:12 2014 -0500
++
++    Typo in UPGRADE document
++
++M	UPGRADE.asciidoc
++
+ commit 2610b6d3bcac59f16777475477d1a8c9b1207034
+ Author: Francis Lachapelle <flachapelle@inverse.ca>
+ Date:   Thu Dec 12 11:46:35 2013 -0500
+@@ -28703,6 +28755,21 @@ M	html/pfappserver/lib/pfappserver/Form/
+ M	html/pfappserver/root/portal/profile/view.tt
+ M	html/pfappserver/root/static/admin/configuration/portal_profile.js
+ 
++commit 77c6893701ba5f8ca3589e9f3fd6fd988f086d92
++Author: Julien Semaan <jul.semaan@gmail.com>
++Date:   Fri Jan 17 10:38:42 2014 -0500
++
++    Fix pfdetectd not starting because of pid file
++    
++    Fixes the case where either pfdetect crashes or the server crashes and
++    the pid file is left in the file system. On reboot or on service restart
++    the service won't start because it thinks it's running.
++    
++    Now if the PID file is there it will also check that the pid it contains
++    is running
++
++M	addons/pfdetect_remote/initrd/pfdetectd
++
+ commit f1e234847617a17665e70670e3c7b215ad983e8c
+ Author: Francis Lachapelle <flachapelle@inverse.ca>
+ Date:   Thu Jan 16 13:07:45 2014 -0500
+--- packetfence-4.7.0.orig/NEWS.asciidoc
++++ packetfence-4.7.0/NEWS.asciidoc
+@@ -131,6 +131,18 @@ Version 4.5.1 released on 2014-11-10
+ 
+ New Features
+ ++++++++++++
++* Added compliance enforcement to OPSWAT GEARS provisioner.
++
++Enhancements
++++++++++++++
++* Make Cisco web authentication sessions use less memory.
++* Internationalized the provisioners templates.
++
++Bug Fixes
+++++++++++
++* Fix node pagination when sorting.
++* Fix provisioners that were not enforced on external authentication sources. 
++* Fix IBM and Symantec provisioners configuration form.
+ 
+ * Added compliance enforcement to OPSWAT GEARS provisioner
+ 
+@@ -146,6 +158,7 @@ Bug Fixes
+ * Fix node pagination when sorting
+ * Fix provisioners that were not enforced on external authentication sources
+ * Fix IBM and Symantec provisioners configuration form
++>>>>>>> devel
+ 
+ Version 4.5.0 released on 2014-10-22
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

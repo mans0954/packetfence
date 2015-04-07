@@ -131,18 +131,6 @@ Version 4.5.1 released on 2014-11-10
 
 New Features
 ++++++++++++
-* Added compliance enforcement to OPSWAT GEARS provisioner.
-
-Enhancements
-++++++++++++
-* Make Cisco web authentication sessions use less memory.
-* Internationalized the provisioners templates.
-
-Bug Fixes
-+++++++++
-* Fix node pagination when sorting.
-* Fix provisioners that were not enforced on external authentication sources. 
-* Fix IBM and Symantec provisioners configuration form.
 
 * Added compliance enforcement to OPSWAT GEARS provisioner
 
@@ -158,7 +146,6 @@ Bug Fixes
 * Fix node pagination when sorting
 * Fix provisioners that were not enforced on external authentication sources
 * Fix IBM and Symantec provisioners configuration form
->>>>>>> devel
 
 Version 4.5.0 released on 2014-10-22
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
